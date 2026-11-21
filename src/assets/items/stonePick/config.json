@@ -1,7 +1,6 @@
 {
   "name": "Picareta de pedra",
   "icon": "stonePick",
-  "unique": true,
   "kind": "tool",
   "tool": { "role": "mining", "miningMultiplier": 1.35, "mineTier": 3, "durability": 160 },
   "hit": { "damage": 2, "reach": 44, "cooldown": 0.32 },

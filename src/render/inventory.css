@@ -455,10 +455,31 @@
   border-radius: 0;
 }
 .recipe-entry:hover { background: #a6a6a6; outline: 2px solid #fff3a0; transform: none; }
+.recipe-entry.unavailable,
+.recipe-entry:disabled { opacity: .42; filter: grayscale(1); cursor: not-allowed; }
+.recipe-entry:disabled:hover { background: #8b8b8b; outline: 0; }
 .recipe-entry b { position: absolute; right: 3px; bottom: 1px; color: #fff; text-shadow: 1px 1px #222; }
 #recipeBookEmpty { margin: auto 5px; color: #666; text-align: center; font: 10px/1.4 var(--mono); }
 .inventory-board { padding: 9px; }
 .inventory-top { display: grid; grid-template-columns: 42px 112px 1fr; gap: 7px; align-items: start; min-height: 160px; }
+.backpack.station-mode .inventory-top {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  min-height: 160px;
+}
+.backpack.station-mode .equipment-slots,
+.backpack.station-mode .player-preview { display: none; }
+.backpack.station-mode .craft-station {
+  width: min(100%, 340px);
+  padding-left: 0;
+}
+.backpack.station-mode .craft-flow { justify-content: center; }
+.backpack.station-mill .craft-grid {
+  grid-template-columns: 36px;
+  grid-template-rows: repeat(2, 36px);
+}
+.backpack.station-mill .craft-grid .cell:nth-child(2),
+.backpack.station-mill .craft-grid .cell:nth-child(4) { display: none; }
 .equipment-slots { display: grid; grid-template-columns: 40px; gap: 3px; margin: 0; }
 .equipment-slots .cell { width: 40px; height: 36px; }
 .player-preview { display: block; width: 110px; height: 148px; margin: 0; background: #050505; border: 2px inset #eee; image-rendering: pixelated; }
@@ -487,6 +508,7 @@
 .backpack .cell.picked, .backpack .cell.over { outline: 2px solid #fff3a0; background: #999; }
 .backpack .cell b, .backpack .cell small { color: white; text-shadow: 1px 1px #222; }
 .backpack .bag-foot { padding: 6px 10px; color: #444; background: #b5b5b5; border-top: 2px solid #888; }
+.backpack .bag-foot { display: none; }
 .backpack .durability {
   background: linear-gradient(90deg, #e0b24f calc(var(--durability) * 100%), #292929 0);
 }

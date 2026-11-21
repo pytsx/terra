@@ -269,6 +269,9 @@ export class Expedition {
   fillRecipe(index: number) {
     return this.commands.run(this.actions.fillRecipe(index));
   }
+  inspectRecipe(index: number) {
+    return this.bag.inspectRecipe(index);
+  }
   private performFillRecipe(index: number) { return this.bag.fillRecipe(index); }
   private aimedContact(aim: Point) {
     const p = this.player, dx = aim.x - p.x - p.w / 2, dy = aim.y - p.y - p.h / 2;

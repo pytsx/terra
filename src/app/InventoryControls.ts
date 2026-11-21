@@ -55,6 +55,12 @@ export class InventoryControls {
       const recipe = event.target instanceof Element
         ? event.target.closest<HTMLElement>('[data-recipe]') : null;
       if (recipe) {
+        if (recipe.dataset.available !== 'true') {
+          this.game().inspectRecipe(Number(recipe.dataset.recipe));
+          element('bagFeedback').textContent = 'Prévia da receita · reúna os ingredientes para fabricar.';
+          this.refresh();
+          return;
+        }
         if (this.game().fillRecipe(Number(recipe.dataset.recipe))) {
           element('bagFeedback').textContent = 'Receita colocada na grade.';
           this.refresh();
@@ -74,6 +80,7 @@ export class InventoryControls {
         return;
       }
       const ref = refOf(event.target);
+      if (ref?.area === 'grid' && element('craftGrid').classList.contains('recipe-preview')) return;
       if (!ref || !this.game().clickStack(ref)) return;
       const cursor = this.game().cursorStack;
       element('bagFeedback').textContent = cursor

@@ -237,7 +237,10 @@ test('itens de drop e craft consumíveis são classificados pelos assets', () =>
 });
 
 test('moinho e forno liberam somente suas receitas especializadas', () => {
-  const mill = recipes.match([{ item: 'wheat', amount: 1 }, null, null, null], 2, 'mill');
+  const mill = recipes.match([
+    { item: 'wheat', amount: 1 }, null,
+    { item: 'coal', amount: 1 }, null,
+  ], 2, 'mill');
   assert.deepEqual(mill?.output, { item: 'flour', amount: 1 });
   assert.equal(recipes.match([{ item: 'wheat', amount: 1 }, null, null, null], 2, 'oven'), undefined);
   const oven = recipes.match([
@@ -245,6 +248,31 @@ test('moinho e forno liberam somente suas receitas especializadas', () => {
     { item: 'flour', amount: 1 }, null,
   ], 2, 'oven');
   assert.deepEqual(oven?.output, { item: 'bread', amount: 1 });
+});
+
+test('moinho restringe o slot superior ao ingrediente e o inferior ao combustível', () => {
+  const pack = new Inventory(startingSlots({ wheat: 1, coal: 1, stone: 1 }));
+  pack.changeGrid(2, 'mill');
+  const slots = pack.snapshot().slots;
+  const wheat = slots.findIndex((slot) => slot?.item === 'wheat');
+  const coal = slots.findIndex((slot) => slot?.item === 'coal');
+  const stone = slots.findIndex((slot) => slot?.item === 'stone');
+  assert.equal(pack.move({ area: 'bag', index: wheat }, { area: 'grid', index: 0 }), true);
+  assert.equal(pack.move({ area: 'bag', index: coal }, { area: 'grid', index: 2 }), true);
+  assert.equal(pack.move({ area: 'bag', index: stone }, { area: 'grid', index: 2 }), false);
+  assert.equal(pack.move({ area: 'bag', index: stone }, { area: 'grid', index: 1 }), false);
+});
+
+test('picaretas podem ser fabricadas novamente quando há materiais suficientes', () => {
+  const pack = new Inventory(startingSlots({ stone: 6, wood: 4 }));
+  pack.changeGrid(3, 'workbench');
+  const recipe = recipes.recipes.findIndex((entry) => entry.output.item === 'stonePick');
+  assert.equal(pack.fillRecipe(recipe), true);
+  assert.equal(pack.takeResult()?.item, 'stonePick');
+  assert.equal(pack.fillRecipe(recipe), true);
+  assert.equal(pack.takeResult()?.item, 'stonePick');
+  const picks = pack.snapshot().slots.filter((slot) => slot?.item === 'stonePick');
+  assert.equal(picks.length, 2);
 });
 
 test('blocos e ferramentas usam tiers de mineração', () => {

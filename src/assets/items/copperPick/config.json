@@ -1,7 +1,6 @@
 {
   "name": "Picareta de cobre",
   "icon": "copperPick",
-  "unique": true,
   "kind": "tool",
   "tool": {
     "role": "mining",

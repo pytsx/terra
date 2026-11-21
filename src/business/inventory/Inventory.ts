@@ -58,6 +58,7 @@ export class Inventory {
   private readonly equipment: Slot[];
   private grid = empty(4);
   private station: Recipe['station'];
+  private inspectedRecipe: Slot[] | null = null;
   private cursor: Slot = null;
   private cursorOrigin: SlotRef | null = null;
   constructor(slots: readonly Slot[] = startingSlots(), equipment: readonly Slot[] = empty(4)) {
@@ -75,12 +76,32 @@ export class Inventory {
   get size() {
     return Math.sqrt(this.grid.length);
   }
+  get activeStation() {
+    return this.station;
+  }
+  inspectRecipe(index: number) {
+    const recipe = recipes.recipes[index];
+    if (!recipe) return false;
+    const preview = empty(this.grid.length);
+    recipe.pattern.forEach((row, y) => row.forEach((item, x) => {
+      if (item && y * this.size + x < preview.length) preview[y * this.size + x] = { item, amount: 1 };
+    }));
+    this.inspectedRecipe = preview;
+    return true;
+  }
   private cells(ref: SlotRef) {
     const slots = ref.area === 'bag' ? this.slots : ref.area === 'grid' ? this.grid :
       ref.area === 'equipment' ? this.equipment : undefined;
     return slots && Number.isInteger(ref.index) && ref.index >= 0 && ref.index < slots.length
       ? slots
       : undefined;
+  }
+  private acceptsGridItem(index: number, item: string) {
+    if (this.station !== 'mill') return true;
+    // The mill has two meaningful cells in its 2×2 backing grid: product at
+    // the top and fuel directly below it. The other cells are intentionally
+    // unavailable, so arbitrary items cannot be inserted as fuel.
+    return index === 0 ? item === 'wheat' : index === 2 ? item === 'coal' || item === 'wood' : false;
   }
   at(index: number): Readonly<Stack> | null {
     const stack = this.slots[index];
@@ -114,6 +135,7 @@ export class Inventory {
     const a = src[from.index],
       b = dst[to.index];
     if (!a) return false;
+    if (to.area === 'grid' && !this.acceptsGridItem(to.index, a.item)) return false;
     if (to.area === 'equipment' && (ITEMS[a.item].armor?.slot !== ARMOR_SLOTS[to.index] || a.amount !== 1))
       return false;
     if (from.area === 'equipment' && to.area === 'grid') return false;
@@ -143,6 +165,7 @@ export class Inventory {
       cells[ref.index] = null;
       return true;
     }
+    if (ref.area === 'grid' && !this.acceptsGridItem(ref.index, this.cursor.item)) return false;
     if (ref.area === 'equipment' &&
       (ITEMS[this.cursor.item].armor?.slot !== ARMOR_SLOTS[ref.index] || this.cursor.amount !== 1))
       return false;
@@ -226,11 +249,44 @@ export class Inventory {
       const needed = new Map<string, number>();
       for (const item of recipe.pattern.flat()) if (item) needed.set(item, (needed.get(item) ?? 0) + 1);
       return [...needed].every(([item, amount]) => (available.get(item) ?? 0) >= amount);
-    }).map(({ recipe, index }) => ({ index, output: { ...recipe.output } }));
+    }).map(({ recipe, index }) => {
+      const requirements = new Map<string, number>();
+      for (const item of recipe.pattern.flat()) if (item)
+        requirements.set(item, (requirements.get(item) ?? 0) + 1);
+      return {
+        index,
+        output: { ...recipe.output },
+        station: recipe.station,
+        requirements: [...requirements].map(([item, amount]) => ({ item, amount })),
+      };
+    });
+  }
+  recipeBookEntries() {
+    const available = this.availableCounts();
+    return recipes.recipes.map((recipe, index) => {
+      const requirements = new Map<string, number>();
+      for (const item of recipe.pattern.flat()) if (item)
+        requirements.set(item, (requirements.get(item) ?? 0) + 1);
+      const fitsStation = !this.station || (this.station === 'workbench'
+        ? (!recipe.station || recipe.station === 'workbench')
+        : recipe.station === this.station);
+      const fitsGrid = recipe.pattern.length <= this.size && recipe.pattern[0].length <= this.size;
+      const hasItems = [...requirements].every(([item, amount]) => (available.get(item) ?? 0) >= amount);
+      const uniqueTaken = ITEMS[recipe.output.item].unique &&
+        [...this.slots, ...this.grid, ...this.equipment].some((s) => s?.item === recipe.output.item);
+      return {
+        index,
+        output: { ...recipe.output },
+        station: recipe.station,
+        requirements: [...requirements].map(([item, amount]) => ({ item, amount })),
+        available: fitsStation && fitsGrid && hasItems && !uniqueTaken,
+      };
+    }).sort((a, b) => Number(b.available) - Number(a.available));
   }
   fillRecipe(index: number) {
     const recipe = recipes.recipes[index];
     if (!recipe || !this.craftableRecipes().some((entry) => entry.index === index)) return false;
+    this.inspectedRecipe = null;
     if (this.cursor) {
       store(this.slots, this.cursor);
       this.cursor = null;
@@ -351,9 +407,11 @@ export class Inventory {
       slots: clone(this.slots),
       equipment: clone(this.equipment),
       grid: clone(this.grid),
+      recipePreview: this.inspectedRecipe ? clone(this.inspectedRecipe) : undefined,
       size: this.size,
+      station: this.station,
       result: this.preview(),
-      craftable: this.craftableRecipes(),
+      craftable: this.recipeBookEntries(),
       cursor: this.held(),
     };
   }

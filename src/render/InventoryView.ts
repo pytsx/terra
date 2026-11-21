@@ -1,7 +1,5 @@
 import {
   BELT_SIZE,
-  BLOCKS,
-  placedTile,
   ITEMS,
   type Slot,
   type SlotRef,
@@ -14,11 +12,19 @@ export interface BagModel {
   slots: readonly Slot[];
   equipment: readonly Slot[];
   grid: readonly Slot[];
+  recipePreview?: readonly Slot[];
   size: number;
+  station?: 'workbench' | 'mill' | 'oven';
   result: Slot;
   seed: string;
   slot: number;
-  craftable: readonly { index: number; output: Stack }[];
+  craftable: readonly {
+    index: number;
+    output: Stack;
+    station?: 'workbench' | 'mill' | 'oven';
+    requirements: readonly { item: string; amount: number }[];
+    available: boolean;
+  }[];
   cursor: Slot;
   player: Parameters<typeof drawExplorer>[1];
 }
@@ -80,12 +86,18 @@ export class InventoryView {
     }
   }
   draw(m: BagModel) {
-    element('bagSeed').textContent = m.seed;
-    element('bag-title').textContent = m.size === 3 ? 'Bancada de fabricação' : 'Mochila de campo';
-    element('craftSize').textContent = m.size + ' × ' + m.size;
+    const dialog = element('inventory');
+    dialog.classList.toggle('station-mode', !!m.station);
+    dialog.classList.toggle('station-mill', m.station === 'mill');
+    dialog.classList.toggle('station-oven', m.station === 'oven');
+    element('bagSeed').textContent = m.station ? '' : m.seed;
+    const stationNames = { workbench: 'Bancada de fabricação', mill: 'Moinho', oven: 'Forno' } as const;
+    element('bag-title').textContent = m.station ? stationNames[m.station] : 'Mochila de campo';
+    element('craftSize').textContent = '';
     const grid = element('craftGrid');
     grid.style.setProperty('--side', String(m.size));
-    grid.replaceChildren(...m.grid.map((s, i) => this.cell(s, { area: 'grid', index: i }, m.slot)));
+    grid.classList.toggle('recipe-preview', !!m.recipePreview);
+    grid.replaceChildren(...(m.recipePreview ?? m.grid).map((s, i) => this.cell(s, { area: 'grid', index: i }, m.slot)));
     element('packSlots').replaceChildren(
       ...m.slots
         .slice(BELT_SIZE)
@@ -98,10 +110,14 @@ export class InventoryView {
       ...m.equipment.map((s, i) => this.cell(s, { area: 'equipment', index: i }, m.slot)),
     );
     this.drawPlayer(element<HTMLCanvasElement>('playerPreview'), m);
-    const recipes = m.craftable.map(({ index, output }) => {
+    const recipes = m.craftable.map(({ index, output, requirements, available }) => {
       const button = node('button', undefined, 'recipe-entry');
       button.dataset.recipe = String(index);
-      button.title = `Preencher receita de ${ITEMS[output.item].name}`;
+      button.dataset.available = String(available);
+      button.setAttribute('aria-disabled', String(!available));
+      button.classList.toggle('unavailable', !available);
+      const ingredients = requirements.map(({ item, amount }) => `${ITEMS[item].name} × ${amount}`).join(', ');
+      button.title = `Preencher receita de ${ITEMS[output.item].name} · Necessário: ${ingredients}`;
       button.setAttribute('aria-label', button.title);
       button.append(this.icons.item(output.item));
       if (output.amount > 1) button.append(node('b', String(output.amount)));
@@ -125,9 +141,9 @@ export class InventoryView {
     result.setAttribute('aria-label', result.title);
     if (m.result) this.decorate(result, m.result);
     element('resultName').textContent = m.result ? ITEMS[m.result.item].name : 'Resultado';
-    const station = Object.keys(ITEMS).find((id) => BLOCKS[placedTile(id) ?? -1]?.craftSize === 3);
+    const station = m.station === 'workbench' ? 'workbench' : m.station;
     element('packEmblem').replaceChildren(
-      m.size === 3 && station ? this.icons.item(station) : node('span', undefined, 'bag-icon'),
+      station ? this.icons.item(station) : node('span', undefined, 'bag-icon'),
     );
   }
   private drawPlayer(canvas: HTMLCanvasElement, model: BagModel) {

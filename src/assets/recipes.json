@@ -144,7 +144,12 @@
   },
   {
     "station": "mill",
-    "pattern": [["wheat"]],
+    "pattern": [["wheat"], ["coal"]],
+    "output": { "item": "flour", "amount": 1 }
+  },
+  {
+    "station": "mill",
+    "pattern": [["wheat"], ["wood"]],
     "output": { "item": "flour", "amount": 1 }
   },
   {
