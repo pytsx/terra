@@ -36,6 +36,8 @@ import item_flourConfig from './items/flour/config.json';
 import item_flourScript from './items/flour';
 import item_breadConfig from './items/bread/config.json';
 import item_breadScript from './items/bread';
+import item_doughConfig from './items/dough/config.json';
+import item_doughScript from './items/dough';
 import item_cooked_beefConfig from './items/cooked_beef/config.json';
 import item_cooked_beefScript from './items/cooked_beef';
 import item_swordConfig from './items/sword/config.json';
@@ -241,6 +243,7 @@ export const modularItems = immutable({
   "wheat": { config: item_wheatConfig, script: item_wheatScript },
   "flour": { config: item_flourConfig, script: item_flourScript },
   "bread": { config: item_breadConfig, script: item_breadScript },
+  "dough": { config: item_doughConfig, script: item_doughScript },
   "cooked_beef": { config: item_cooked_beefConfig, script: item_cooked_beefScript },
   "sword": { config: item_swordConfig, script: item_swordScript },
   "crystalPick": { config: item_crystalpickConfig, script: item_crystalpickScript },

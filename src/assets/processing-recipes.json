@@ -1,0 +1,4 @@
+[
+  {"id":"wheat.grinding","requires":["grinding"],"inputs":[{"item":"wheat","amount":1}],"outputs":[{"item":"flour","amount":1}],"work":4},
+  {"id":"bread.baking","requires":["baking"],"inputs":[{"item":"dough","amount":1}],"outputs":[{"item":"bread","amount":1}],"work":15,"conditions":{"minTemperature":180,"maxTemperature":250}}
+]

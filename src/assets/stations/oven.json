@@ -1,0 +1,1 @@
+{"id":"oven","name":"Forno de pedra","block":"OVEN","mode":"processing","capabilities":["baking"],"storage":{"inputSlots":3,"outputSlots":3,"fuelSlots":1,"stackLimit":64},"processing":{"speed":1,"automaticRepeat":true},"energy":{"type":"thermal","acceptedFuels":["wood","coal"],"maxTemperature":350,"heatingRate":12,"coolingRate":3}}

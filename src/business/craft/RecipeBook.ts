@@ -4,6 +4,7 @@ export interface Recipe {
   station?: 'workbench' | 'mill' | 'oven';
   pattern: readonly (readonly (string | null)[])[];
   output: Stack;
+  byproducts?: readonly Stack[];
 }
 // Remove somente margens vazias. Espaços internos e a orientação fazem parte da fórmula.
 function signature(rows: readonly (readonly (string | null)[])[]) {
@@ -40,6 +41,7 @@ export class RecipeBook {
             row.length !== width || row.some((id) => id !== null  && !Object.hasOwn(ITEMS, id)),
         ) ||
         !Object.hasOwn(ITEMS, output.item) ||
+        recipe.byproducts?.some(stack => !Object.hasOwn(ITEMS, stack.item) || !Number.isSafeInteger(stack.amount) || stack.amount <= 0) ||
         !Number.isSafeInteger(output.amount) ||
         output.amount <= 0 ||
         this.patterns.has(key)

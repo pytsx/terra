@@ -56,6 +56,7 @@ export interface ExpeditionSave {
   /** Persistent population. Missing in legacy v4 saves. */
   entities?: EntitySave[];
   entityRegions?: EntityRegionSave[];
+  stations?: import('./stations/StationTypes').StationStoreSave;
 }
 // O domínio define o contrato. Adaptadores são escolhidos na composição do jogo.
 export interface SaveRepository {

@@ -306,6 +306,7 @@ export class Inventory {
   takeResult(to?: SlotRef) {
     const result = this.preview();
     if (!result) return null;
+    const matched = recipes.match(this.grid, this.size, this.station);
     if (to) {
       if (to.area !== 'bag' || !this.cells(to)) return null;
       const target = this.slots[to.index];
@@ -339,6 +340,7 @@ export class Inventory {
     this.grid.forEach((s, i) => {
       if (s && --s.amount === 0) this.grid[i] = null;
     });
+    for (const byproduct of matched?.byproducts ?? []) store(this.slots, createStack(byproduct.item, byproduct.amount));
     return result;
   }
   changeGrid(size: 2 | 3, station: Recipe['station'] = size === 3 ? 'workbench' : undefined) {

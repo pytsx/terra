@@ -1,0 +1,1 @@
+{"id":"mill","name":"Moinho manual","block":"MILL","mode":"processing","capabilities":["grinding"],"storage":{"inputSlots":2,"outputSlots":2,"fuelSlots":0,"stackLimit":64},"processing":{"speed":1,"automaticRepeat":true},"energy":{"type":"manual","workRate":1}}

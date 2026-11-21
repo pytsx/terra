@@ -1,0 +1,4 @@
+[
+  {"item":"wood","burnDuration":30,"targetTemperature":230},
+  {"item":"coal","burnDuration":90,"targetTemperature":320}
+]

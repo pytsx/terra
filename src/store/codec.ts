@@ -3,6 +3,8 @@ import { startingSlots } from '../business/inventory/Inventory';
 import type { BlockDamage, DroppedSave, EntityRegionSave, EntitySave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
 import { EntityRegistry } from '../business/entities/EntityRegistry';
 import { clamp } from '../shared/math';
+import { stationRegistry, processingRecipes } from '../business/stations/StationRegistry';
+import type { StationSave, StationStoreSave } from '../business/stations/StationTypes';
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Formato de save inválido.');
@@ -62,6 +64,42 @@ function decodeEntity(value: unknown, infinite: boolean): EntitySave | undefined
         (typeof item === 'number' && Number.isFinite(item)))) entity.data[key] = item;
   }
   return entity;
+}
+function decodeStations(value: unknown, infinite: boolean): StationStoreSave | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const raw = object(value); if (!Array.isArray(raw.records)) return;
+  const occupied = new Set<string>(), ids = new Set<string>(), records: StationSave[] = [];
+  for (const value of raw.records) try {
+    const station = object(value), definitionId = station.definitionId;
+    if (typeof station.id !== 'string' || !station.id || ids.has(station.id) || typeof definitionId !== 'string') continue;
+    const definition = stationRegistry.get(definitionId); if (!definition || definition.mode !== 'processing') continue;
+    const x = station.x, y = station.y;
+    if (!Number.isSafeInteger(x) || (!infinite && (x < 0 || x >= WORLD_W)) || !Number.isInteger(y) || y < 0 || y >= WORLD_H) continue;
+    const position = `${x},${y}`; if (occupied.has(position)) continue;
+    const decodeSlots = (source: unknown, count: number) => Array.isArray(source) && source.length === count ? source.map(decodeSlot) : undefined;
+    const input = decodeSlots(station.input, definition.storage!.inputSlots), output = decodeSlots(station.output, definition.storage!.outputSlots),
+      fuel = decodeSlots(station.fuel, definition.storage!.fuelSlots); if (!input || !output || !fuel) continue;
+    const energy = station.energyState && typeof station.energyState === 'object' && !Array.isArray(station.energyState) ? object(station.energyState) : {};
+    const burningRaw = energy.burningFuel && typeof energy.burningFuel === 'object' && !Array.isArray(energy.burningFuel) ? object(energy.burningFuel) : undefined;
+    const burningFuel = burningRaw && typeof burningRaw.item === 'string' && ITEMS[burningRaw.item] &&
+      Number.isFinite(burningRaw.remainingSeconds) && Number.isFinite(burningRaw.totalSeconds) && Number.isFinite(burningRaw.targetTemperature)
+      ? { item: burningRaw.item, remainingSeconds: Math.max(0, burningRaw.remainingSeconds as number), totalSeconds: Math.max(0, burningRaw.totalSeconds as number), targetTemperature: Math.max(20, burningRaw.targetTemperature as number) } : null;
+    let process: StationSave['process'] = null;
+    if (station.process && typeof station.process === 'object' && !Array.isArray(station.process)) {
+      const job = object(station.process), recipe = typeof job.recipeId === 'string' ? processingRecipes.get(job.recipeId) : undefined;
+      if (recipe && recipe.requires.every(cap => definition.capabilities.includes(cap)) && Array.isArray(job.reservedInputs)) process = {
+        recipeId: recipe.id, elapsedWork: numeric(job.elapsedWork, 0, 0, recipe.work), requiredWork: recipe.work,
+        reservedInputs: job.reservedInputs.map(decodeSlot).filter((s): s is NonNullable<Slot> => !!s),
+        status: job.status === 'processing' || job.status === 'blocked' ? job.status : 'paused',
+      };
+    }
+    records.push({ id: station.id, definitionId, x: x as number, y: y as number,
+      revision: Math.floor(numeric(station.revision, 0, 0, Number.MAX_SAFE_INTEGER)), input, output, fuel,
+      enabled: station.enabled !== false, selectedRecipe: typeof station.selectedRecipe === 'string' ? station.selectedRecipe : undefined,
+      process, energyState: { temperature: numeric(energy.temperature, 20, 0, 1000), targetTemperature: numeric(energy.targetTemperature, 200, 20, 1000), burningFuel } });
+    ids.add(station.id); occupied.add(position);
+  } catch { continue; }
+  return { nextId: Math.max(1, Math.floor(numeric(raw.nextId, records.length + 1, 1, Number.MAX_SAFE_INTEGER))), records };
 }
 export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
   const data = object(JSON.parse(raw));
@@ -267,5 +305,6 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
     drops,
     entities,
     entityRegions,
+    stations: decodeStations(data.stations, infinite),
   };
 }

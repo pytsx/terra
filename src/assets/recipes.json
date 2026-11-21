@@ -143,18 +143,9 @@
     "output": { "item": "gate", "amount": 1 }
   },
   {
-    "station": "mill",
-    "pattern": [["wheat"], ["coal"]],
-    "output": { "item": "flour", "amount": 1 }
-  },
-  {
-    "station": "mill",
-    "pattern": [["wheat"], ["wood"]],
-    "output": { "item": "flour", "amount": 1 }
-  },
-  {
-    "station": "oven",
-    "pattern": [["flour", "flour"], ["flour", null]],
-    "output": { "item": "bread", "amount": 1 }
+    "station": "workbench",
+    "pattern": [["flour", "flour", "flour"], [null, "waterBucket", null]],
+    "output": { "item": "dough", "amount": 3 },
+    "byproducts": [{ "item": "bucket", "amount": 1 }]
   }
 ]

@@ -23,6 +23,9 @@ import { rainIntensity } from './weather';
 import { SimulationRegion } from './simulation/SimulationRegion';
 import { EntityUpdateGroup } from './simulation/EntityUpdateGroup';
 import { GAME_DAY_SECONDS } from './time';
+import { StationStore } from './stations/StationStore';
+import { ProcessingSystem } from './stations/ProcessingSystem';
+import { stationRegistry } from './stations/StationRegistry';
 import {
   CommandBus,
   SetPlacementModeCommand,
@@ -104,6 +107,8 @@ export class Expedition {
   private raining = false;
   private readonly entityUpdates = new EntityUpdateGroup<EngineEntity>();
   private readonly entityRegions: RegionalEntityStore;
+  private readonly stations: StationStore;
+  private readonly processing = new ProcessingSystem();
   private activeEntityCount = 0;
   private swing: { item: string; angle: number; started: number; duration: number } | null = null;
 
@@ -134,6 +139,17 @@ export class Expedition {
     this.zoom = save?.zoom ?? 1;
     this.placementMode = save?.placementMode ?? 'approach';
     this.drops = new DroppedItems(save?.drops);
+    this.stations = new StationStore(save?.stations);
+    this.terrain.onBlockEdited(({ x, y, previous, block }) => {
+      const before = previous === undefined ? undefined : stationRegistry.forBlock(previous);
+      const after = stationRegistry.forBlock(block);
+      if (before?.mode === 'processing' && before.id !== after?.id) {
+        const instance = this.stations.getAt(x, y);
+        if (instance) for (const stack of this.stations.remove(instance.id))
+          this.drops.spawn({ ...stack, x: (x + 0.5) * TILE, y: y * TILE - 6 }, 0, -45);
+      }
+      if (after?.mode === 'processing') this.stations.create(after.id, x, y);
+    });
     this.terrain.onItemProduced(({ item, amount, x, y }) => this.drops.spawn({ item, amount, x, y }));
     this.rng = new RNG(this.terrain.h ^ 0x77b09);
     this.weatherMode = save?.weatherMode ?? 'natural';
@@ -193,6 +209,21 @@ export class Expedition {
   get hotbar() { return this.bag.belt(); }
   get inventory() {
     return this.bag.snapshot();
+  }
+  stationAt(x: number, y: number) { return this.stations.getAt(x, y); }
+  stationInsert(x: number, y: number, area: 'input' | 'fuel', item: string, amount = 1) {
+    const station = this.stations.getAt(x, y); if (!station || this.bag.count(item) < amount) return false;
+    const left = this.processing.insert(station, area, { item, amount });
+    const moved = amount - left; if (!moved) return false;
+    for (let i = 0; i < moved; i++) this.bag.use(item); return left === 0;
+  }
+  stationTakeOutput(x: number, y: number, index = 0) {
+    const station = this.stations.getAt(x, y), stack = station && this.processing.takeOutput(station, index);
+    if (!stack) return false; this.bag.collect(stack.item, stack.amount, stack.durability); return true;
+  }
+  operateStation(x: number, y: number, active: boolean) {
+    const station = this.stations.getAt(x, y); if (!station) return false;
+    this.processing.setManualWork(station, active); return true;
   }
   executeCommand(line: string) {
     return this.commands.executeLine(line, 'player');
@@ -627,6 +658,7 @@ export class Expedition {
     if (placePressed) this.commands.run(this.actions.build(controls.aim));
     const p = this.player;
     const region = SimulationRegion.around(p);
+    this.processing.step(dt, this.stations.active(region));
     this.mobs = this.entityRegions.activate(region);
     const activeMobs = this.entityUpdates.select(this.mobs, region);
     this.activeEntityCount = activeMobs.length;
@@ -701,6 +733,8 @@ export class Expedition {
       activeEntities: this.activeEntityCount,
       ...this.entityRegions.stats,
       ...this.terrain.blockUpdateStats,
+      stations: this.stations.size,
+      completedProcesses: this.processing.completed,
     };
   }
   drainEvents() {
@@ -774,6 +808,7 @@ export class Expedition {
       placementMode: this.placementMode,
       drops: this.drops.save(),
       entityRegions: this.entityRegions.save(),
+      stations: this.stations.save(),
     };
   }
 }
