@@ -16,6 +16,10 @@ export type TransformationCondition = PropertyCondition |
 interface EvolutionRuleBase {
   id: string;
   priority?: number;
+  eligibility?: {
+    natural: boolean;
+    playerPlaced: boolean;
+  };
   conditions: TransformationCondition;
   duration: { days?: number; seconds?: number; mode: 'continuous' };
   probability: number;
@@ -29,6 +33,7 @@ export interface LegacyTransformationAsset extends EvolutionRuleBase {
 export interface WorldEvolutionAsset extends EvolutionRuleBase {
   source: string;
   action: { type: 'transformBlock'; to: string; preserve: ('waterVolume')[] } |
-    { type: 'placeFeature'; feature: string; replaceSource: boolean };
+    { type: 'placeFeature'; feature: string; replaceSource: boolean } |
+    { type: 'spawnItem'; item: string; amount: number };
 }
 export type TransformationAsset = LegacyTransformationAsset | WorldEvolutionAsset;

@@ -131,6 +131,7 @@ export class Expedition {
     this.zoom = save?.zoom ?? 1;
     this.placementMode = save?.placementMode ?? 'approach';
     this.drops = new DroppedItems(save?.drops);
+    this.terrain.onItemProduced(({ item, amount, x, y }) => this.drops.spawn({ item, amount, x, y }));
     this.rng = new RNG(this.terrain.h ^ 0x77b09);
     this.weatherMode = save?.weatherMode ?? 'natural';
     this.raining = save?.raining ?? (this.weatherMode === 'rain' ||

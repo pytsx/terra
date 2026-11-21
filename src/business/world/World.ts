@@ -23,6 +23,18 @@ export interface BlockEdit {
   readonly block: number;
 }
 
+export interface ProducedItem {
+  readonly item: string;
+  readonly amount: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface TransformationEligibility {
+  readonly natural: boolean;
+  readonly playerPlaced: boolean;
+}
+
 interface CellState {
   natural?: boolean;
   damage?: number;
@@ -30,6 +42,7 @@ interface CellState {
 
 export class World {
   private readonly editListeners = new Set<(edit: BlockEdit) => void>();
+  private readonly itemListeners = new Set<(item: ProducedItem) => void>();
   private readonly commands = new CommandBus(this);
   private readonly actions = {
     setBlock: defineCommand('setBlock', (x: number, y: number, id: number) => this.writeBlock(x, y, id)),
@@ -85,28 +98,55 @@ export class World {
     return true;
   }
 
-  canTransformNaturally(x: number, y: number) {
-    return !this.edited(x, y) || this.naturalCells.has(this.key(x, y));
+  canTransformNaturally(x: number, y: number, eligibility: TransformationEligibility = {
+    natural: true, playerPlaced: false,
+  }) {
+    if (!this.inside(x, y)) return false;
+    const natural = !this.edited(x, y) || this.naturalCells.has(this.key(x, y));
+    return natural ? eligibility.natural : eligibility.playerPlaced;
   }
-  transformNaturally(x: number, y: number, from: number, to: number, preserveWaterVolume: boolean) {
-    return this.commands.run(this.actions.transformBlock(x, y, from, to, preserveWaterVolume));
+  transformNaturally(x: number, y: number, from: number, to: number, preserveWaterVolume: boolean,
+    eligibility?: TransformationEligibility) {
+    return this.commands.run(this.actions.transformBlock(x, y, from, to, preserveWaterVolume, eligibility));
   }
-  private applyNaturalTransformation(x: number, y: number, from: number, to: number, preserveWaterVolume: boolean) {
-    if (!this.inside(x, y) || this.get(x, y) !== from || !this.canTransformNaturally(x, y)) return false;
+  private applyNaturalTransformation(x: number, y: number, from: number, to: number, preserveWaterVolume: boolean,
+    eligibility?: TransformationEligibility) {
+    if (!this.inside(x, y) || this.get(x, y) !== from || !this.canTransformNaturally(x, y, eligibility)) return false;
     if (!preserveWaterVolume) this.hydrology.clear(x, y, from);
     this.writeBlock(x, y, to, { natural: true });
     return true;
   }
-  placeNaturalFeature(x: number, y: number, source: number, plan: FeaturePlan | undefined, replaceSource: boolean) {
-    return this.commands.run(this.actions.placeFeature(x, y, source, plan, replaceSource));
+  placeNaturalFeature(x: number, y: number, source: number, plan: FeaturePlan | undefined, replaceSource: boolean,
+    eligibility?: TransformationEligibility) {
+    return this.commands.run(this.actions.placeFeature(x, y, source, plan, replaceSource, eligibility));
+  }
+  canPlaceNaturalFeature(x: number, y: number, source: number, plan: FeaturePlan | undefined, replaceSource: boolean,
+    eligibility?: TransformationEligibility) {
+    if (!plan || this.get(x, y) !== source || !this.canTransformNaturally(x, y, eligibility)) return false;
+    const placements = replaceSource ? plan.placements : plan.placements.filter(cell => cell.x !== x || cell.y !== y);
+    return placements.length > 0 && placements.every(cell =>
+      this.validCell(cell.x, cell.y, cell.block) &&
+      this.canTransformNaturally(cell.x, cell.y, cell.x === x && cell.y === y ? eligibility : undefined) &&
+      plan.replace.has(this.get(cell.x, cell.y)));
   }
   private applyNaturalFeature(x: number, y: number, source: number, plan: FeaturePlan | undefined,
-    replaceSource: boolean) {
-    if (!plan || this.get(x, y) !== source || !this.canTransformNaturally(x, y)) return false;
+    replaceSource: boolean, eligibility?: TransformationEligibility) {
+    if (!this.canPlaceNaturalFeature(x, y, source, plan, replaceSource, eligibility)) return false;
+    if (!plan) return false;
     const placements = replaceSource ? plan.placements : plan.placements.filter(cell => cell.x !== x || cell.y !== y);
-    if (!placements.length || placements.some(cell => !this.validCell(cell.x, cell.y, cell.block) ||
-      !this.canTransformNaturally(cell.x, cell.y) || !plan.replace.has(this.get(cell.x, cell.y)))) return false;
     for (const cell of placements) this.writeBlock(cell.x, cell.y, cell.block, { natural: true });
+    return true;
+  }
+
+  onItemProduced(listener: (item: ProducedItem) => void) {
+    this.itemListeners.add(listener);
+    return () => this.itemListeners.delete(listener);
+  }
+
+  produceItem(item: string, amount: number, x: number, y: number) {
+    if (!Number.isSafeInteger(amount) || amount <= 0) return false;
+    const produced = Object.freeze({ item, amount, x: (x + 0.5) * TILE, y: y * TILE });
+    for (const listener of [...this.itemListeners]) listener(produced);
     return true;
   }
 
