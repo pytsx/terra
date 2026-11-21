@@ -4,12 +4,13 @@ import { Mob } from './Mob';
 import type { World } from '../world/World';
 import type { RNG } from '../../shared/math';
 import { modularEntities } from '../../assets';
+import type { EntitySave } from '../save';
 const SLIME_ASSET = modularEntities.slime;
 export class Slime extends Mob {
   private readonly health = new Health(SLIME_ASSET.config.health);
   private jumpTime: number;
   private flash = 0;
-  private readonly tint: number;
+  private tint: number;
   private state: 'world' | 'active' | 'dormant' | 'dead' = 'world';
   constructor(x: number, y: number, seed: number) {
     super(x, y, SLIME_ASSET.config.width, SLIME_ASSET.config.height);
@@ -59,5 +60,19 @@ export class Slime extends Mob {
       tint: this.tint,
       state: this.state,
     };
+  }
+  saveState(): Omit<EntitySave, 'id'> {
+    return { kind: SLIME_ASSET.config.id, actor: this.saveActor(), health: this.health.remaining,
+      data: { jumpTime: this.jumpTime, tint: this.tint, state: this.state } };
+  }
+  restoreState(save: EntitySave) {
+    this.restoreActor(save.actor);
+    this.health.restore(save.health);
+    const jumpTime = save.data?.jumpTime;
+    if (typeof jumpTime === 'number' && Number.isFinite(jumpTime)) this.jumpTime = jumpTime;
+    const tint = save.data?.tint;
+    if (typeof tint === 'number' && Number.isSafeInteger(tint) && tint >= 0 && tint <= 2) this.tint = tint;
+    const state = save.data?.state;
+    if (state === 'world' || state === 'active' || state === 'dormant' || state === 'dead') this.state = state;
   }
 }

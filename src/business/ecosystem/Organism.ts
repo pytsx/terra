@@ -7,6 +7,7 @@ import type { EngineEntity } from '../entities/EntityRegistry';
 import type { World } from '../world/World';
 import type { Activity, Species } from './Habitat';
 import { rainIntensity } from '../weather';
+import type { EntitySave } from '../save';
 
 export class Organism extends Animal implements EngineEntity {
   private readonly health: Health;
@@ -116,5 +117,24 @@ export class Organism extends Animal implements EngineEntity {
 
   view() {
     return { ...super.view(), kind: this.species.config.id, phase: this.phase, health: this.health.remaining, activity: this.activity };
+  }
+  saveState(): Omit<EntitySave, 'id'> {
+    return { kind: this.species.config.id, actor: this.saveActor(), health: this.health.remaining,
+      animal: this.saveAnimal(), data: { cooldown: this.cooldown, activity: this.activity,
+        phase: this.phase, homeX: this.homeX, homeFloor: this.homeFloor ?? null } };
+  }
+  restoreState(save: EntitySave) {
+    this.restoreActor(save.actor);
+    this.health.restore(save.health);
+    if (save.animal) this.restoreAnimal(save.animal);
+    const data = save.data;
+    if (!data) return;
+    if (typeof data.cooldown === 'number' && Number.isFinite(data.cooldown)) this.cooldown = data.cooldown;
+    if (typeof data.phase === 'number' && Number.isFinite(data.phase)) this.phase = data.phase;
+    if (typeof data.homeX === 'number' && Number.isFinite(data.homeX)) this.homeX = data.homeX;
+    if (typeof data.homeFloor === 'number' && Number.isFinite(data.homeFloor)) this.homeFloor = data.homeFloor;
+    const activity = data.activity;
+    if (typeof activity === 'string' && ['walk', 'tunnel', 'rest', 'turn', 'flee', 'chase', 'digest',
+      'climb', 'descend', 'emerge', 'return'].includes(activity)) this.activity = activity as Activity;
   }
 }

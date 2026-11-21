@@ -1,6 +1,7 @@
 import { ARMOR_SLOTS, BLOCKS, ITEMS, BELT_SIZE, TILE, WORLD_H, WORLD_W, type Slot } from '../business/catalog';
 import { startingSlots } from '../business/inventory/Inventory';
-import type { BlockDamage, DroppedSave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
+import type { BlockDamage, DroppedSave, EntitySave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
+import { EntityRegistry } from '../business/entities/EntityRegistry';
 import { clamp } from '../shared/math';
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -20,6 +21,47 @@ function decodeSlot(value: unknown): Slot {
   return max === undefined
     ? { item: stack.item, amount: stack.amount }
     : { item: stack.item, amount: stack.amount, durability: Math.floor(numeric(stack.durability, max, 1, max)) };
+}
+function decodeEntity(value: unknown, infinite: boolean): EntitySave | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const raw = object(value), actor = raw.actor && typeof raw.actor === 'object' && !Array.isArray(raw.actor)
+    ? object(raw.actor) : undefined;
+  if (typeof raw.id !== 'string' || !raw.id || raw.id.length > 120 || typeof raw.kind !== 'string' ||
+    !EntityRegistry.asset(raw.kind) || !actor || !Number.isFinite(actor.x) || !Number.isFinite(actor.y)) return;
+  const asset = EntityRegistry.asset(raw.kind)!;
+  const entity: EntitySave = {
+    id: raw.id,
+    kind: raw.kind,
+    actor: {
+      x: infinite ? actor.x as number : clamp(actor.x as number, 0, (WORLD_W - 1) * TILE),
+      y: clamp(actor.y as number, 0, (WORLD_H - 1) * TILE),
+      vx: numeric(actor.vx, 0, -1000, 1000),
+      vy: numeric(actor.vy, 0, -1000, 1000),
+      ground: actor.ground === true,
+      face: numeric(actor.face, 1, -1, 1) < 0 ? -1 : 1,
+      swimming: actor.swimming === true,
+    },
+    health: numeric(raw.health, asset.config.health, 0, asset.config.health),
+  };
+  if (raw.animal && typeof raw.animal === 'object' && !Array.isArray(raw.animal)) {
+    const animal = object(raw.animal);
+    entity.animal = { hydration: numeric(animal.hydration, 1, 0, 1),
+      nutrition: numeric(animal.nutrition, 1, 0, 1), deprivation: numeric(animal.deprivation, 0, 0, 25) };
+  }
+  if ('breeding' in asset.config && raw.breeding && typeof raw.breeding === 'object' && !Array.isArray(raw.breeding)) {
+    const breeding = object(raw.breeding), stages = ['calf', 'adult', 'courting', 'recovering'] as const;
+    if (stages.includes(breeding.stage as typeof stages[number])) entity.breeding = {
+      stage: breeding.stage as typeof stages[number],
+      remaining: numeric(breeding.remaining, 0, 0, Math.max(asset.config.breeding.cooldown, asset.config.breeding.growthTime)),
+    };
+  }
+  if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
+    entity.data = {};
+    for (const [key, item] of Object.entries(object(raw.data)).slice(0, 16))
+      if (key.length <= 40 && (typeof item === 'string' || typeof item === 'boolean' || item === null ||
+        (typeof item === 'number' && Number.isFinite(item)))) entity.data[key] = item;
+  }
+  return entity;
 }
 export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
   const data = object(JSON.parse(raw));
@@ -174,6 +216,9 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
   }
   const rawNaturalCells: unknown[] = Array.isArray(data.naturalCells) ? data.naturalCells :
     Array.isArray(data.ecologicalSoil) ? data.ecologicalSoil : [];
+  const entities = Array.isArray(data.entities)
+    ? data.entities.slice(0, 256).map(value => decodeEntity(value, infinite)).filter((value): value is EntitySave => !!value)
+    : undefined;
   return {
     version: 4,
     weather: validWeather ? { ticks, carry: numeric(weather.carry, 0, -1, 1), doses: weather.doses as number[],
@@ -211,5 +256,6 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
     zoom: numeric(legacy ? legacyZoom : data.zoom, 1, 0.7, 1.65),
     placementMode: data.placementMode === 'free' ? 'free' : 'approach',
     drops,
+    entities,
   };
 }

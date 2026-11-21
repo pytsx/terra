@@ -80,8 +80,8 @@ test('fronteiras de chunks são respeitadas: células em chunks diferentes são 
   for (const x of [xLeft, xRight]) {
     for (let row = 0; row < y; row++) world.set(x, row, B.AIR, false);
     world.set(x, y, B.DIRT, false);
-    world.hydrology.restore([[x, y, 550]]);
   }
+  world.hydrology.restore([[xLeft, y, 550], [xRight, y, 550]]);
 
   // Scan both partitions (or all partitions) covering both cells
   for (let p = 0; p < 4; p++) {
@@ -132,6 +132,7 @@ test('orçamento de processamento justo não causa starvation: múltiplos candid
       positions.push(x);
     }
   }
+  world.hydrology.restore(positions.map(x => [x, y, 550]));
 
   if (positions.length === 0) {
     // fallback: use partition 0 at any x

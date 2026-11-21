@@ -139,8 +139,12 @@ export class Expedition {
     this.weatherUntil = save?.weatherUntil ?? (this.weatherMode === 'natural' ? 0 : this.elapsed + 75);
     if (save?.weatherUntil === undefined && this.weatherMode === 'natural' && this.raining)
       this.commands.dispatch(new SetWeatherCommand('rain', 'system'));
+    if (save?.entities) this.mobs = save.entities
+      .map(entity => EntityRegistry.restore(entity))
+      .filter((entity): entity is EngineEntity => !!entity && !entity.dead);
     this.registerTerminalActions();
-    this.spawn();
+    // Legacy saves have no entity payload and retain the old population bootstrap.
+    if (!save?.entities) this.spawn();
   }
   private registerTerminalActions() {
     const none = (args: readonly string[]): [] => {
@@ -729,6 +733,7 @@ export class Expedition {
       zoom: this.zoom,
       placementMode: this.placementMode,
       drops: this.drops.save(),
+      entities: this.mobs.filter(entity => !entity.dead).map(entity => EntityRegistry.save(entity)),
     };
   }
 }

@@ -6,6 +6,7 @@ import type { EngineEntity } from './EntityRegistry';
 import type { World } from '../world/World';
 import type { RNG } from '../../shared/math';
 import { modularEntities } from '../../assets';
+import type { EntitySave } from '../save';
 
 const asset = modularEntities.cow;
 
@@ -80,5 +81,20 @@ export class Cow extends Animal {
       baby: this.breeding.baby,
       love: this.inLove,
     };
+  }
+  saveState(): Omit<EntitySave, 'id'> {
+    return { kind: asset.config.id, actor: this.saveActor(), health: this.health.remaining,
+      animal: this.saveAnimal(), breeding: this.breeding.save(),
+      data: { wanderTime: this.wanderTime, activity: this.activity } };
+  }
+  restoreState(save: EntitySave) {
+    this.restoreActor(save.actor);
+    this.health.restore(save.health);
+    if (save.animal) this.restoreAnimal(save.animal);
+    if (save.breeding) this.breeding.restore(save.breeding);
+    const wanderTime = save.data?.wanderTime;
+    if (typeof wanderTime === 'number' && Number.isFinite(wanderTime)) this.wanderTime = wanderTime;
+    const activity = save.data?.activity;
+    if (activity === 'world' || activity === 'active' || activity === 'dormant') this.activity = activity;
   }
 }

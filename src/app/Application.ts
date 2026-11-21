@@ -3,6 +3,7 @@ import { GameService, BELT_SIZE, TILE } from '../business';
 import { buildBagModel } from './BagModel';
 import { createViews, element, type Views } from '../render';
 import { Input } from './Input';
+import { PerformanceMonitor } from './PerformanceMonitor';
 type Panel = 'menu' | 'inventory' | 'help' | 'new-world' | 'world-map';
 export class Application {
   private readonly views: Views = createViews();
@@ -34,6 +35,7 @@ export class Application {
   private hudIn = 0;
   private saveIn = 18;
   private autoSave: boolean;
+  private readonly performance = new PerformanceMonitor();
   constructor(private readonly service: GameService) {
     this.autoSave = !service.loadFailed;
     this.views.world.reset(this.game.player, this.game.world, this.game.magnification);
@@ -49,6 +51,8 @@ export class Application {
   private get game() {
     return this.service.game;
   }
+  /** Rolling metrics for diagnostics and long-session browser tests. */
+  get performanceStats() { return this.performance.snapshot(); }
   private aim() {
     return this.views.world.aim(this.input.pointer, this.game.magnification);
   }
@@ -331,9 +335,12 @@ export class Application {
     window.addEventListener('pagehide', flush);
   }
   private frame = (time: number) => {
+    const frameStarted = performance.now();
+    let simulationMs = 0, renderingMs = 0;
     const dt = this.previousTime ? Math.min(0.08, (time - this.previousTime) / 1000) : 0;
     this.previousTime = time;
     if (!this.panel) {
+      const simulationStarted = performance.now();
       this.remainder += dt;
       let processBlockFrame = true;
       while (this.remainder >= 1 / 60) {
@@ -350,6 +357,7 @@ export class Application {
         }
       }
       this.views.world.animate(dt);
+      simulationMs = performance.now() - simulationStarted;
       this.saveIn -= dt;
       if (this.saveIn <= 0) {
         this.saveIn = 18;
@@ -357,7 +365,9 @@ export class Application {
       }
     }
     if (!this.panel || this.repaint) {
+      const renderingStarted = performance.now();
       this.views.world.draw(this.game.scene(this.aim()), !!this.panel);
+      renderingMs = performance.now() - renderingStarted;
       this.repaint = false;
     }
     this.hudIn -= dt;
@@ -365,6 +375,8 @@ export class Application {
       if (!this.panel) this.refresh();
       this.hudIn = 0.16;
     }
+    this.performance.record(time && this.previousTime ? dt * 1000 : performance.now() - frameStarted,
+      simulationMs, renderingMs);
     requestAnimationFrame(this.frame);
   };
 }

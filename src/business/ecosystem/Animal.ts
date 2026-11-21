@@ -105,4 +105,13 @@ export abstract class Animal extends Mob {
   override view() {
     return { ...super.view(), hydration: this.hydration, nutrition: this.nutrition, seeking: this.seeking };
   }
+  protected saveAnimal() {
+    return { hydration: this.hydration, nutrition: this.nutrition, deprivation: this.deprivation };
+  }
+  protected restoreAnimal(state: { hydration: number; nutrition: number; deprivation: number }) {
+    if (![state.hydration, state.nutrition, state.deprivation].every(Number.isFinite)) return;
+    this.hydration = Math.max(0, Math.min(1, state.hydration));
+    this.nutrition = Math.max(0, Math.min(1, state.nutrition));
+    this.deprivation = Math.max(0, state.deprivation);
+  }
 }

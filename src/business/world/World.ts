@@ -102,6 +102,9 @@ export class World {
     natural: true, playerPlaced: false,
   }) {
     if (!this.inside(x, y)) return false;
+    // Removing a player construction must not leave an invisible provenance
+    // barrier that permanently prevents vegetation from occupying empty space.
+    if (this.get(x, y) === B.AIR) return eligibility.natural;
     const natural = !this.edited(x, y) || this.naturalCells.has(this.key(x, y));
     return natural ? eligibility.natural : eligibility.playerPlaced;
   }
@@ -153,8 +156,11 @@ export class World {
   exposedToSky(x: number, y: number) {
     if (!this.inside(x, y)) return false;
     for (let row = y - 1; row >= 0; row--) {
-      const block = this.peek(x, row);
-      if (block === undefined || (block !== B.AIR && block !== B.WATER && block !== B.LAVA && block !== B.TORCH))
+      // Lazy columns may not have materialized the sections above this cell.
+      // A sky query is authoritative and therefore loads only the sections it
+      // actually crosses instead of treating unloaded terrain as a ceiling.
+      const block = this.get(x, row);
+      if (block !== B.AIR && block !== B.WATER && block !== B.LAVA && block !== B.TORCH)
         return false;
     }
     return true;

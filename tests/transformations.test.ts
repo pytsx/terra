@@ -151,5 +151,5 @@ test('prioridade resolve conflito uma vez e uma quarta regra funciona apenas com
   step(system, world, x, y, 1);
   assert.equal(world.get(x, y), B.SAND);
   assert.equal(system.save().length, 0);
-  assert.equal(transformationRegistry.rules.length, 4);
+  assert.equal(transformationRegistry.rules.length, 5);
 });

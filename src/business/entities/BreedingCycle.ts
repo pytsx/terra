@@ -1,4 +1,5 @@
-type Stage = 'calf' | 'adult' | 'courting' | 'recovering';
+export type BreedingStage = 'calf' | 'adult' | 'courting' | 'recovering';
+type Stage = BreedingStage;
 interface Transitions {
   feed?: Stage;
   mate?: Stage;
@@ -46,5 +47,11 @@ export class BreedingCycle {
     if (!next) return;
     this.remaining = Math.max(0, this.remaining - dt);
     if (this.remaining === 0) this.stage = next;
+  }
+  save() { return { stage: this.stage, remaining: this.remaining }; }
+  restore(state: { stage: BreedingStage; remaining: number }) {
+    if (!Object.hasOwn(transitions, state.stage) || !Number.isFinite(state.remaining) || state.remaining < 0) return;
+    this.stage = state.stage;
+    this.remaining = state.remaining;
   }
 }

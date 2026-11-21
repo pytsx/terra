@@ -56,7 +56,7 @@ test('plano é atômico e não sobrescreve construção no espaço da copa', () 
     world.get(cell.x, cell.y) === B.WOOD), false, 'nenhum fragmento da árvore pode ser aplicado');
 });
 
-test('seca reinicia germinação e edição manual protege a muda', () => {
+test('seca reinicia germinação e muda plantada manualmente também pode crescer', () => {
   const world = new World('OAK-RESET'), x = successfulX(world);
   prepareSapling(world, x);
   advance(world, x, GAME_DAY_SECONDS * 2);
@@ -67,10 +67,11 @@ test('seca reinicia germinação e edição manual protege a muda', () => {
   assert.equal(world.get(x, y), B.SAPLING);
 
   const manual = new World('OAK-MANUAL');
-  prepareSapling(manual, x);
-  manual.set(x, y, B.SAPLING);
-  advance(manual, x, GAME_DAY_SECONDS * 10);
-  assert.equal(manual.get(x, y), B.SAPLING);
+  const manualX = successfulX(manual);
+  prepareSapling(manual, manualX);
+  manual.set(manualX, y, B.SAPLING);
+  advance(manual, manualX, GAME_DAY_SECONDS * 3);
+  assert.equal(manual.get(manualX, y), B.WOOD);
   assert.equal(manual.evolution.save().length, 0);
 });
 

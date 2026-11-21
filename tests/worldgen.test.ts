@@ -23,8 +23,9 @@ test('cada seção v3 preserva os blocos da coluna original em qualquer ordem de
     }, mixHash(world.h, cx, 0x4c11)));
     assert.equal(original.reduce((hash, id) => Math.imul(hash ^ id, 16777619), 2166136261) >>> 0, checksum);
     const sy = world.heightAt(originX);
-    assert.equal(world.peek(originX, sy), original[sy * width]);
-    assert.equal(world.peek(originX, height - 1), original[(height - 1) * width]);
+    assert.equal(world.peek(originX, sy), undefined, 'metadados de superfície não materializam seções');
+    assert.equal(world.get(originX, sy), original[sy * width]);
+    assert.equal(world.peek(originX, height - 1), undefined, 'seção profunda continua preguiçosa');
     for (let cy = height / CHUNK_HEIGHT - 1; cy >= 0; cy--)
       for (let y = cy * CHUNK_HEIGHT; y < (cy + 1) * CHUNK_HEIGHT; y++)
         for (let x = 0; x < width; x++)

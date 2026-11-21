@@ -23,17 +23,17 @@ export class ChunkStore {
     let chunk = this.columns.get(cx);
     if (!chunk) {
       chunk = { terrain: this.generateColumn(cx), sections: new Map() };
-      for (let cy = 0; cy < this.sectionCount; cy++) {
-        const cells = chunk.terrain.generate(cy);
-        this.restoreSection(cx, cy, cells);
-        chunk.sections.set(cy, cells);
-      }
       this.columns.set(cx, chunk);
       if (this.columns.size > MAX_COLUMNS) {
         const oldest = this.columns.keys().next().value!;
         this.columns.delete(oldest);
         this.evicted(oldest);
       }
+    } else {
+      // Map preserves insertion order. Reinsert on access so the first entry is
+      // always the least recently used column instead of the oldest created one.
+      this.columns.delete(cx);
+      this.columns.set(cx, chunk);
     }
     return chunk;
   }
@@ -43,8 +43,16 @@ export class ChunkStore {
   peek(cx: number, cy: number) { return this.columns.get(cx)?.sections.get(cy); }
 
   section(cx: number, cy: number) {
+    if (!Number.isSafeInteger(cy) || cy < 0 || cy >= this.sectionCount)
+      throw new RangeError(`Invalid chunk section: ${cy}`);
     const column = this.column(cx);
-    return column.sections.get(cy)!;
+    let cells = column.sections.get(cy);
+    if (!cells) {
+      cells = column.terrain.generate(cy);
+      this.restoreSection(cx, cy, cells);
+      column.sections.set(cy, cells);
+    }
+    return cells;
   }
 
   materializedColumns() {

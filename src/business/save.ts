@@ -17,6 +17,18 @@ export interface DroppedSave extends Stack {
   vy?: number;
   pickupDelay?: number;
 }
+export interface EntitySave {
+  id: string;
+  kind: string;
+  actor: {
+    x: number; y: number; vx: number; vy: number;
+    ground: boolean; face: number; swimming: boolean;
+  };
+  health: number;
+  animal?: { hydration: number; nutrition: number; deprivation: number };
+  breeding?: { stage: 'calf' | 'adult' | 'courting' | 'recovering'; remaining: number };
+  data?: Record<string, number | string | boolean | null>;
+}
 export interface ExpeditionSave {
   version: 4;
   generationVersion?: number;
@@ -40,6 +52,8 @@ export interface ExpeditionSave {
   zoom: number;
   placementMode?: import('./commands').PlacementMode;
   drops?: DroppedSave[];
+  /** Persistent population. Missing in legacy v4 saves. */
+  entities?: EntitySave[];
 }
 // O domínio define o contrato. Adaptadores são escolhidos na composição do jogo.
 export interface SaveRepository {

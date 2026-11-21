@@ -67,4 +67,13 @@ export abstract class Actor {
       swimming: this.swimming,
     };
   }
+  protected saveActor(): import('../save').EntitySave['actor'] {
+    return { x: this.x, y: this.y, vx: this.vx, vy: this.vy, ground: this.ground,
+      face: this.face, swimming: this.swimming };
+  }
+  protected restoreActor(state: import('../save').EntitySave['actor']) {
+    if (![state.x, state.y, state.vx, state.vy, state.face].every(Number.isFinite)) return;
+    this.x = state.x; this.y = state.y; this.vx = state.vx; this.vy = state.vy;
+    this.ground = !!state.ground; this.face = Math.sign(state.face) || 1; this.swimming = !!state.swimming;
+  }
 }

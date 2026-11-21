@@ -7,4 +7,7 @@ export class Health {
   damage(amount: number) {
     this.points = Math.max(0, this.points - amount);
   }
+  restore(points: number) {
+    if (Number.isFinite(points) && points >= 0) this.points = points;
+  }
 }

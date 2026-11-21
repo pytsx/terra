@@ -8,6 +8,7 @@ import type { RNG } from '../../shared/math';
 import { Slime } from './Slime';
 import { Cow } from './Cow';
 import { Wolf } from './Wolf';
+import type { EntitySave } from '../save';
 
 export interface EngineEntity {
   readonly dead: boolean;
@@ -17,6 +18,8 @@ export interface EngineEntity {
   feed?(): boolean;
   mate?(other: EngineEntity): EngineEntity | null;
   inLove?: boolean;
+  saveState(): Omit<EntitySave, 'id'>;
+  restoreState(save: EntitySave): void;
 }
 
 type EntityFactory = (x: number, y: number, seed: number, baby?: boolean) => EngineEntity;
@@ -33,6 +36,16 @@ const factories = new Map<string, EntityFactory>(Object.entries(mobFactories));
 for (const [id, species] of Object.entries(ecologicalEntities))
   factories.set(id, (x, y, seed) => new Organism(species, x, y, seed));
 
+const identities = new WeakMap<EngineEntity, string>();
+function identity(entity: EngineEntity) {
+  let id = identities.get(entity);
+  if (id) return id;
+  const view = entity.view();
+  id = `${String(view.kind)}:${Math.round(view.x * 1000)}:${Math.round(view.y * 1000)}`;
+  identities.set(entity, id);
+  return id;
+}
+
 function asset<K extends EntityId>(id: K): (typeof modularEntities)[K];
 function asset(id: string): EntityAsset | undefined;
 function asset(id: string) {
@@ -45,7 +58,21 @@ export const EntityRegistry = {
   },
   asset,
   create(id: string, x: number, y: number, seed: number, baby = false): EngineEntity | undefined {
-    return factories.get(id)?.(x, y, seed, baby);
+    const entity = factories.get(id)?.(x, y, seed, baby);
+    if (entity) identities.set(entity, `${id}:${seed}:${Math.round(x * 1000)}:${Math.round(y * 1000)}`);
+    return entity;
+  },
+  save(entity: EngineEntity): EntitySave {
+    return { id: identity(entity), ...entity.saveState() };
+  },
+  restore(save: EntitySave): EngineEntity | undefined {
+    if (!save || typeof save.id !== 'string' || !save.id || typeof save.kind !== 'string' ||
+      !save.actor || !Number.isFinite(save.actor.x) || !Number.isFinite(save.actor.y)) return;
+    const entity = factories.get(save.kind)?.(save.actor.x, save.actor.y, 0, save.breeding?.stage === 'calf');
+    if (!entity) return;
+    entity.restoreState(save);
+    identities.set(entity, save.id);
+    return entity;
   },
   spawnPool(substrate?: number, biome?: string) {
     return this.ids().filter((id) => {

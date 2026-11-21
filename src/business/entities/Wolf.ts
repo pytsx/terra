@@ -5,6 +5,7 @@ import type { EngineEntity } from './EntityRegistry';
 import type { World } from '../world/World';
 import type { RNG } from '../../shared/math';
 import { modularEntities } from '../../assets';
+import type { EntitySave } from '../save';
 
 const asset = modularEntities.wolf;
 
@@ -49,5 +50,16 @@ export class Wolf extends Animal {
   }
   override view() {
     return { ...super.view(), kind: asset.config.id, flash: this.flash, state: this.state };
+  }
+  saveState(): Omit<EntitySave, 'id'> {
+    return { kind: asset.config.id, actor: this.saveActor(), health: this.health.remaining,
+      animal: this.saveAnimal(), data: { state: this.state } };
+  }
+  restoreState(save: EntitySave) {
+    this.restoreActor(save.actor);
+    this.health.restore(save.health);
+    if (save.animal) this.restoreAnimal(save.animal);
+    const state = save.data?.state;
+    if (state === 'world' || state === 'active' || state === 'dormant' || state === 'dead') this.state = state;
   }
 }
