@@ -1,7 +1,7 @@
 import { B, TILE, WORLD_W, WORLD_H, LEGACY_WORLD_H, CURRENT_GENERATION, CHUNK_WIDTH, CHUNK_HEIGHT, BLOCKS } from '../catalog';
 import { RNG, clamp, noise1, noise2, hashText } from '../../shared/math';
 import type { TileEdit, BlockDamage, ExploredSection } from '../save';
-import { modularBlocks } from '../../assets';
+import type { RuntimeContent } from '../content/RuntimeContent';
 import { createGenerationContext, modernPipeline } from '../worldgen';
 import { TerrainColumn } from '../worldgen/TerrainColumn';
 import { ChunkStore } from './ChunkStore';
@@ -9,7 +9,7 @@ import { ExplorationMap } from './ExplorationMap';
 import { BlockPartitionScheduler, BLOCK_PARTITION_COUNT, blockPartitionAt } from '../simulation/BlockPartitionScheduler';
 import type { SimulationRegion } from '../simulation/SimulationRegion';
 import { WorldEvolutionSystem } from '../simulation/WorldEvolutionSystem';
-import type { FeaturePlan } from '../worldgen/FeatureGenerator';
+import { FeatureGenerator, type FeaturePlan } from '../worldgen/FeatureGenerator';
 
 import { Hydrology } from './Hydrology';
 import { CommandBus } from '../commands/CommandBus';
@@ -52,9 +52,9 @@ export class World {
     placeFeature: defineCommand('placeFeature', this.applyNaturalFeature.bind(this)),
   };
   readonly hydrology = new Hydrology();
-  readonly evolution = new WorldEvolutionSystem();
+  readonly evolution: WorldEvolutionSystem;
   /** Compatibility alias for saves and integrations from the transformation-only version. */
-  readonly transformations = this.evolution;
+  get transformations() { return this.evolution; }
   private readonly blockUpdates: BlockPartitionScheduler;
 
   waterAt(x: number, y: number, block = this.get(x, y)) {
@@ -189,7 +189,8 @@ export class World {
   private fallTime = 0;
   private readonly partitionFallTime = new Float64Array(BLOCK_PARTITION_COUNT);
   readonly spawnX: number;
-  constructor(readonly seed: string, readonly generationVersion = CURRENT_GENERATION) {
+  constructor(readonly seed: string, readonly generationVersion = CURRENT_GENERATION, content?: Pick<RuntimeContent, 'generation' | 'transformations' | 'structures'>) {
+    this.evolution = new WorldEvolutionSystem(content?.transformations, new FeatureGenerator(content?.structures));
     this.h = hashText(seed);
     this.blockUpdates = new BlockPartitionScheduler(this.h);
     this.height = generationVersion === 1 ? LEGACY_WORLD_H : WORLD_H;
@@ -199,7 +200,7 @@ export class World {
     this.surface = new Int16Array(this.infinite ? 0 : WORLD_W);
     this.chunks = new ChunkStore(
       Math.ceil(this.height / CHUNK_HEIGHT),
-      cx => new TerrainColumn(this.h, cx, this.height, this.spawnX, this.generationVersion),
+      cx => new TerrainColumn(this.h, cx, this.height, this.spawnX, this.generationVersion, content?.generation.terrain),
       (cx, cy, cells) => this.restoreSection(cx, cy, cells),
       cx => {
         this.evolution.releaseColumn(cx);
@@ -220,7 +221,7 @@ export class World {
     this.hydrology.onChanged((x, y) => this.blockUpdates.invalidate(x, y));
     if (this.infinite) this.onBlockEdited(({ x, y, block }) => this.survey.update(x, y, block));
     if (generationVersion === 1) this.generateLegacy();
-    else if (generationVersion === 2) modernPipeline.run(createGenerationContext({
+    else if (generationVersion === 2) (content?.generation.modern ?? modernPipeline).run(createGenerationContext({
       generationVersion, seed: this.h, width: this.width, height: this.height, spawnX: this.spawnX,
       originX: 0, surface: this.surface, globalX: (x) => x, get: (x, y) => this.get(x, y),
       set: (x, y, block) => this.set(x, y, block, false),
@@ -604,10 +605,7 @@ export class World {
     for (let x = sx - 3; x <= sx + 3; x++)
       for (let y = this.surface[x] - 5; y < this.surface[x]; y++) this.set(x, y, B.AIR, false);
     // Pequeno acampamento inicial com tochas — marcadores de exploração.
-    for (const block of Object.values(modularBlocks)) {
-      const config = block.config as typeof block.config & {
-        spawnDecoration?: { offsets: number[] };
-      };
+    for (const config of Object.values(BLOCKS)) {
       if (!config.spawnDecoration) continue;
       for (const offset of config.spawnDecoration.offsets) {
         const x = sx + offset;

@@ -18,7 +18,7 @@ export class WorldEvolutionSystem {
   private readonly candidatesByChunk = new Map<string, Set<string>>();
   private readonly scannedCells = new Map<string, Uint8Array>();
 
-  constructor(private readonly registry: TransformationRegistry = transformationRegistry) {}
+  constructor(private readonly registry: TransformationRegistry = transformationRegistry, private readonly features = featureGenerator) {}
 
   step(dt: number, world: World, region: SimulationRegion, partition: number) {
     if (!(dt > 0)) return;
@@ -116,7 +116,7 @@ export class WorldEvolutionSystem {
       if (evaluation.canAttempt) {
         if (rule.rootWaterCost && world.waterStateAt(x, y + 1).volume * 1000 < rule.rootWaterCost) continue;
         const plan = rule.action.type === 'placeFeature'
-          ? featureGenerator.plan(rule.action.feature, x, y, world.h, previous.attempts) : undefined;
+          ? this.features.plan(rule.action.feature, x, y, world.h, previous.attempts) : undefined;
         if (rule.action.type === 'placeFeature' &&
           !world.canPlaceNaturalFeature(x, y, rule.source, plan, rule.action.replaceSource, rule.eligibility)) {
           this.state.set(x, y, rule.id, next);

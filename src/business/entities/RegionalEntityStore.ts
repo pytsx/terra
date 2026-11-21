@@ -16,7 +16,7 @@ export class RegionalEntityStore {
    * intentionally never walked during an ordinary simulation tick. */
   private readonly activeKeys = new Set<string>();
 
-  constructor(regions?: readonly EntityRegionSave[], legacy: readonly EntitySave[] = []) {
+  constructor(regions?: readonly EntityRegionSave[], legacy: readonly EntitySave[] = [], private readonly entities = EntityRegistry) {
     if (regions !== undefined) {
       for (const [rx, ry, entities] of regions) this.bucket(rx, ry).sleeping.push(...entities);
     } else {
@@ -72,7 +72,7 @@ export class RegionalEntityStore {
     this.reindexActive();
     const result: EntityRegionSave[] = [];
     for (const [key, bucket] of this.regions) {
-      const entities = [...bucket.sleeping, ...bucket.active.filter(entity => !entity.dead).map(EntityRegistry.save)];
+      const entities = [...bucket.sleeping, ...bucket.active.filter(entity => !entity.dead).map(this.entities.save)];
       if (!entities.length) continue;
       const [rx, ry] = this.coords(key);
       result.push([rx, ry, entities]);
@@ -93,7 +93,7 @@ export class RegionalEntityStore {
   private wake(bucket: RegionBucket) {
     if (!bucket.sleeping.length) return;
     for (const saved of bucket.sleeping) {
-      const entity = EntityRegistry.restore(saved);
+      const entity = this.entities.restore(saved);
       if (entity && !entity.dead) bucket.active.push(entity);
     }
     bucket.sleeping = [];
@@ -101,7 +101,7 @@ export class RegionalEntityStore {
 
   private sleep(bucket: RegionBucket) {
     if (!bucket.active.length) return;
-    bucket.sleeping.push(...bucket.active.filter(entity => !entity.dead).map(EntityRegistry.save));
+    bucket.sleeping.push(...bucket.active.filter(entity => !entity.dead).map(this.entities.save));
     bucket.active = [];
   }
 

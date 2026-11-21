@@ -1,9 +1,9 @@
 import { ARMOR_SLOTS, BLOCKS, ITEMS, BELT_SIZE, TILE, WORLD_H, WORLD_W, CURRENT_GENERATION, type Slot } from '../business/catalog';
 import { startingSlots } from '../business/inventory/Inventory';
 import type { BlockDamage, DroppedSave, EntityRegionSave, EntitySave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
-import { EntityRegistry } from '../business/entities/EntityRegistry';
+import { defaultContent } from '../assets/runtime';
+import type { RuntimeContent } from '../business/content/RuntimeContent';
 import { clamp } from '../shared/math';
-import { stationRegistry, processingRecipes } from '../business/stations/StationRegistry';
 import type { StationSave, StationStoreSave } from '../business/stations/StationTypes';
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -24,13 +24,13 @@ function decodeSlot(value: unknown): Slot {
     ? { item: stack.item, amount: stack.amount }
     : { item: stack.item, amount: stack.amount, durability: Math.floor(numeric(stack.durability, max, 1, max)) };
 }
-function decodeEntity(value: unknown, infinite: boolean): EntitySave | undefined {
+function decodeEntity(value: unknown, infinite: boolean, content: RuntimeContent): EntitySave | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return;
   const raw = object(value), actor = raw.actor && typeof raw.actor === 'object' && !Array.isArray(raw.actor)
     ? object(raw.actor) : undefined;
   if (typeof raw.id !== 'string' || !raw.id || raw.id.length > 120 || typeof raw.kind !== 'string' ||
-    !EntityRegistry.asset(raw.kind) || !actor || !Number.isFinite(actor.x) || !Number.isFinite(actor.y)) return;
-  const asset = EntityRegistry.asset(raw.kind)!;
+    !content.entities.asset(raw.kind) || !actor || !Number.isFinite(actor.x) || !Number.isFinite(actor.y)) return;
+  const asset = content.entities.asset(raw.kind)!;
   const entity: EntitySave = {
     id: raw.id,
     kind: raw.kind,
@@ -65,14 +65,14 @@ function decodeEntity(value: unknown, infinite: boolean): EntitySave | undefined
   }
   return entity;
 }
-function decodeStations(value: unknown, infinite: boolean): StationStoreSave | undefined {
+function decodeStations(value: unknown, infinite: boolean, content: RuntimeContent): StationStoreSave | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return;
   const raw = object(value); if (!Array.isArray(raw.records)) return;
   const occupied = new Set<string>(), ids = new Set<string>(), records: StationSave[] = [];
   for (const value of raw.records) try {
     const station = object(value), definitionId = station.definitionId;
     if (typeof station.id !== 'string' || !station.id || ids.has(station.id) || typeof definitionId !== 'string') continue;
-    const definition = stationRegistry.get(definitionId); if (!definition || definition.mode !== 'processing') continue;
+    const definition = content.stations.get(definitionId); if (!definition || definition.mode !== 'processing') continue;
     const x = station.x, y = station.y;
     if (typeof x !== 'number' || !Number.isSafeInteger(x) || (!infinite && (x < 0 || x >= WORLD_W)) ||
         typeof y !== 'number' || !Number.isInteger(y) || y < 0 || y >= WORLD_H) continue;
@@ -87,8 +87,8 @@ function decodeStations(value: unknown, infinite: boolean): StationStoreSave | u
       ? { item: burningRaw.item, remainingSeconds: Math.max(0, burningRaw.remainingSeconds as number), totalSeconds: Math.max(0, burningRaw.totalSeconds as number), targetTemperature: Math.max(20, burningRaw.targetTemperature as number) } : null;
     let process: StationSave['process'] = null;
     if (station.process && typeof station.process === 'object' && !Array.isArray(station.process)) {
-      const job = object(station.process), recipe = typeof job.recipeId === 'string' ? processingRecipes.get(job.recipeId) : undefined;
-      if (recipe && processingRecipes.compatible(definition).includes(recipe) && Array.isArray(job.reservedInputs)) process = {
+      const job = object(station.process), recipe = typeof job.recipeId === 'string' ? content.processes.get(job.recipeId) : undefined;
+      if (recipe && content.processes.compatible(definition).includes(recipe) && Array.isArray(job.reservedInputs)) process = {
         recipeId: recipe.id, elapsedWork: numeric(job.elapsedWork, 0, 0, recipe.work), requiredWork: recipe.work,
         reservedInputs: job.reservedInputs.map(decodeSlot).filter((s): s is NonNullable<Slot> => !!s),
         status: job.status === 'processing' || job.status === 'blocked' ? job.status : 'paused',
@@ -102,7 +102,7 @@ function decodeStations(value: unknown, infinite: boolean): StationStoreSave | u
   } catch { continue; }
   return { nextId: Math.max(1, Math.floor(numeric(raw.nextId, records.length + 1, 1, Number.MAX_SAFE_INTEGER))), records };
 }
-export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
+export function decodeSave(raw: string, legacyZoom: number, content: RuntimeContent = defaultContent): ExpeditionSave {
   const data = object(JSON.parse(raw));
   const legacy = data.v === 2 && data.version === undefined;
   if (!legacy && data.version !== 3 && data.version !== 4)
@@ -261,12 +261,12 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
       if (!Array.isArray(entry) || entry.length !== 3 || !Number.isSafeInteger(entry[0]) ||
         !Number.isSafeInteger(entry[1]) || entry[1] < 0 || entry[1] >= Math.ceil(WORLD_H / 32) ||
         !Array.isArray(entry[2])) return [];
-      const decoded = entry[2].map(value => decodeEntity(value, infinite))
+      const decoded = entry[2].map(value => decodeEntity(value, infinite, content))
         .filter((value): value is EntitySave => !!value);
       return decoded.length ? [[entry[0], entry[1], decoded]] : [];
     }) : undefined;
   const entities = entityRegions === undefined && Array.isArray(data.entities)
-    ? data.entities.map(value => decodeEntity(value, infinite)).filter((value): value is EntitySave => !!value)
+    ? data.entities.map(value => decodeEntity(value, infinite, content)).filter((value): value is EntitySave => !!value)
     : undefined;
   return {
     version: 4,
@@ -307,6 +307,6 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
     drops,
     entities,
     entityRegions,
-    stations: decodeStations(data.stations, infinite),
+    stations: decodeStations(data.stations, infinite, content),
   };
 }

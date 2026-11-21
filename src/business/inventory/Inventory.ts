@@ -61,7 +61,7 @@ export class Inventory {
   private inspectedRecipe: Slot[] | null = null;
   private cursor: Slot = null;
   private cursorOrigin: SlotRef | null = null;
-  constructor(slots: readonly Slot[] = startingSlots(), equipment: readonly Slot[] = empty(4)) {
+  constructor(slots: readonly Slot[] = startingSlots(), equipment: readonly Slot[] = empty(4), private readonly book = recipes) {
     this.slots = clone(slots);
     // Migrate malformed old stacks of tools/armor into individual slots.
     for (let index = 0; index < this.slots.length; index++) {
@@ -80,7 +80,7 @@ export class Inventory {
     return this.station;
   }
   inspectRecipe(index: number) {
-    const recipe = recipes.recipes[index];
+    const recipe = this.book.recipes[index];
     if (!recipe) return false;
     const preview = empty(this.grid.length);
     recipe.pattern.forEach((row, y) => row.forEach((item, x) => {
@@ -212,7 +212,7 @@ export class Inventory {
     return plan ? new Map(plan.slots.map(({ key, total }) => [key, total])) : null;
   }
   private preview() {
-    const output = recipes.match(this.grid, this.size, this.station)?.output;
+    const output = this.book.match(this.grid, this.size, this.station)?.output;
     if (
       !output ||
       (ITEMS[output.item].unique &&
@@ -227,13 +227,13 @@ export class Inventory {
       if (stack) counts.set(stack.item, (counts.get(stack.item) ?? 0) + stack.amount);
     return counts;
   }
-  private compatible(recipe: (typeof recipes.recipes)[number]) {
+  private compatible(recipe: Recipe) {
     return recipe.pattern.length <= this.size && recipe.pattern[0].length <= this.size &&
       (!recipe.station || recipe.station === this.station);
   }
   craftableRecipes() {
     const available = this.availableCounts();
-    return recipes.recipes.map((recipe, index) => ({ recipe, index })).filter(({ recipe }) => {
+    return this.book.recipes.map((recipe, index) => ({ recipe, index })).filter(({ recipe }) => {
       if (!this.compatible(recipe)) return false;
       if (ITEMS[recipe.output.item].unique &&
         [...this.slots, ...this.grid, ...this.equipment].some((s) => s?.item === recipe.output.item)) return false;
@@ -254,7 +254,7 @@ export class Inventory {
   }
   recipeBookEntries() {
     const available = this.availableCounts();
-    return recipes.recipes.map((recipe, index) => {
+    return this.book.recipes.map((recipe, index) => {
       const requirements = new Map<string, number>();
       for (const item of recipe.pattern.flat()) if (item)
         requirements.set(item, (requirements.get(item) ?? 0) + 1);
@@ -275,7 +275,7 @@ export class Inventory {
     }).sort((a, b) => Number(b.available) - Number(a.available));
   }
   fillRecipe(index: number) {
-    const recipe = recipes.recipes[index];
+    const recipe = this.book.recipes[index];
     if (!recipe || !this.craftableRecipes().some((entry) => entry.index === index)) return false;
     this.inspectedRecipe = null;
     if (this.cursor) {
@@ -297,7 +297,7 @@ export class Inventory {
   takeResult(to?: SlotRef) {
     const result = this.preview();
     if (!result) return null;
-    const matched = recipes.match(this.grid, this.size, this.station);
+    const matched = this.book.match(this.grid, this.size, this.station);
     if (to) {
       if (to.area !== 'bag' || !this.cells(to)) return null;
       const target = this.slots[to.index];

@@ -15,7 +15,7 @@ export class TerrainColumn {
   readonly landscape?: Landscape;
 
   constructor(private readonly seed: number, cx: number, private readonly height: number,
-    private readonly spawnX: number, private readonly version: number) {
+    private readonly spawnX: number, private readonly version: number, private readonly terrain = terrainPipeline) {
     this.originX = cx * W;
     this.rngSeed = mixHash(seed, cx, 0x4c11);
     if (version >= 4) {
@@ -36,7 +36,7 @@ export class TerrainColumn {
     const startY = top <= this.maxSurface ? Math.min(top, this.minSurface) : top;
     const endY = top <= this.maxSurface ? Math.max(bottom, this.maxSurface + 1) : bottom;
     const cells = new Uint16Array((endY - startY) * W);
-    terrainPipeline.run({
+    this.terrain.run({
       landscape: this.landscape, seed: this.seed, width: W, height: this.height, originX: this.originX,
       generationVersion: this.version,
       spawnX: this.spawnX - this.originX, climate: this.climate, surface: this.surface,

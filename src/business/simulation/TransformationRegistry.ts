@@ -26,7 +26,7 @@ export class TransformationRegistry {
   readonly rules: readonly TransformationRule[];
   private readonly bySource = new Map<number, readonly TransformationRule[]>();
 
-  constructor(assets: readonly TransformationAsset[] = transformationAssets) {
+  constructor(assets: readonly TransformationAsset[] = transformationAssets, structures = worldFeatureRegistry) {
     const ids = new Set<string>();
     const resolved = assets.map((asset): TransformationRule => {
       if (!asset.id || ids.has(asset.id)) throw new Error(`Transformação duplicada: ${asset.id}`);
@@ -48,7 +48,7 @@ export class TransformationRegistry {
         if (declaredAction.type !== 'placeFeature' && declaredAction.type !== 'spawnItem')
           throw new Error('Efeito desconhecido: ' + asset.id);
         if (declaredAction.type === 'placeFeature' &&
-          (!worldFeatureRegistry.has(declaredAction.feature) || typeof declaredAction.replaceSource !== 'boolean'))
+          (!structures.has(declaredAction.feature) || typeof declaredAction.replaceSource !== 'boolean'))
           throw new Error(`Transformação ${asset.id}: feature desconhecida`);
         if (declaredAction.type === 'spawnItem' &&
           (!Object.hasOwn(ITEMS, declaredAction.item) || !Number.isSafeInteger(declaredAction.amount) ||

@@ -14,19 +14,19 @@ import {
 } from './catalog';
 import { World, type TerrainView } from './world/World';
 import { Explorer, type Movement } from './entities/Explorer';
-import { EntityRegistry, type EngineEntity } from './entities/EntityRegistry';
+import type { EngineEntity } from './entities/EntityRegistry';
 import { RegionalEntityStore } from './entities/RegionalEntityStore';
 import { Inventory } from './inventory/Inventory';
 import { RNG, clamp } from '../shared/math';
 import type { ExpeditionSave } from './save';
 import { rainIntensity } from './weather';
-import { biomeRain } from '../assets/generation';
+import { defaultContent } from '../assets/runtime';
+import type { RuntimeContent } from './content/RuntimeContent';
 import { SimulationRegion } from './simulation/SimulationRegion';
 import { EntityUpdateGroup } from './simulation/EntityUpdateGroup';
 import { GAME_DAY_SECONDS } from './time';
 import { StationStore } from './stations/StationStore';
 import { ProcessingSystem } from './stations/ProcessingSystem';
-import { stationRegistry, processingRecipes } from './stations/StationRegistry';
 import type { StationInstance } from './stations/StationTypes';
 import {
   CommandBus,
@@ -112,15 +112,19 @@ export class Expedition {
   private readonly entityRegions: RegionalEntityStore;
   private readonly stations: StationStore;
   private openedStationId: string | null = null;
-  private readonly processing = new ProcessingSystem();
+  private readonly processing: ProcessingSystem;
+  readonly content: RuntimeContent;
   private readonly waterFlow = new Map<string, number>();
   private activeEntityCount = 0;
   private swing: { item: string; angle: number; started: number; duration: number } | null = null;
 
-  constructor(seed: string, save?: ExpeditionSave) {
+  constructor(options: string | { seed: string; content: RuntimeContent }, save?: ExpeditionSave) {
+    const seed = typeof options === 'string' ? options : options.seed;
+    this.content = typeof options === 'string' ? defaultContent : options.content;
+    this.processing = new ProcessingSystem(this.content.stations, this.content.processes, this.content.fuels);
     this.terrain = new World(
       seed.trim().slice(0, 40) || 'AURORA-1264',
-      save?.generationVersion,
+      save?.generationVersion, this.content,
     );
     if (save) {
       this.terrain.importExploration(save.exploration ?? []);
@@ -132,22 +136,22 @@ export class Expedition {
       this.terrain.restoreDamage(save.damage ?? []);
     }
     this.explorer = new Explorer(this.terrain, save?.player);
-    this.entityRegions = new RegionalEntityStore(save?.entityRegions, save?.entities);
+    this.entityRegions = new RegionalEntityStore(save?.entityRegions, save?.entities, this.content.entities);
     this.commands = registerPlacementCommand(registerWeatherCommand(
       new CommandBus<WeatherCommandContext & PlacementCommandContext>(this),
     ));
     this.explore();
-    this.bag = new Inventory(save?.slots, save?.equipment);
+    this.bag = new Inventory(save?.slots, save?.equipment, this.content.recipes);
     this.explorer.syncMaxLife(this.bag.maxLife(), !save);
     this.selected = save?.selected ?? 0;
     this.elapsed = save?.elapsed ?? 0;
     this.zoom = save?.zoom ?? 1;
     this.placementMode = save?.placementMode ?? 'approach';
     this.drops = new DroppedItems(save?.drops);
-    this.stations = new StationStore(save?.stations);
+    this.stations = new StationStore(save?.stations, this.content.stations);
     this.terrain.hydrology.onWaterFlow((x, y, volume) => {
       const station = this.stations.getAt(x, y - 1);
-      if (station && stationRegistry.get(station.definitionId)?.energy.type === 'hydraulic')
+      if (station && this.content.stations.get(station.definitionId)?.energy.type === 'hydraulic')
         this.waterFlow.set(station.id, (this.waterFlow.get(station.id) ?? 0) + volume);
     });
     // Legacy worlds store installed machines as tile edits, not station records.
@@ -156,7 +160,7 @@ export class Expedition {
     for (const edit of this.terrain.exportEdits()) {
       const [x, y, block] = edit.length === 3 ? edit :
         [edit[0] % this.terrain.width, Math.floor(edit[0] / this.terrain.width), edit[1]];
-      const definition = stationRegistry.forBlock(block);
+      const definition = this.content.stations.forBlock(block);
       if (definition?.mode === 'processing') {
         installed.set(`${x},${y}`, definition.id);
         if (!this.stations.getAt(x, y)) this.stations.create(definition.id, x, y);
@@ -167,8 +171,8 @@ export class Expedition {
         throw new Error('Save contém estação sem bloco correspondente: ' + station.id);
     }
     this.terrain.onBlockEdited(({ x, y, previous, block }) => {
-      const before = previous === undefined ? undefined : stationRegistry.forBlock(previous);
-      const after = stationRegistry.forBlock(block);
+      const before = previous === undefined ? undefined : this.content.stations.forBlock(previous);
+      const after = this.content.stations.forBlock(block);
       if (before?.mode === 'processing' && before.id !== after?.id) {
         const instance = this.stations.getAt(x, y);
         if (instance?.id === this.openedStationId) this.openedStationId = null;
@@ -240,13 +244,13 @@ export class Expedition {
   private stationReachable(station: StationInstance) {
     const hit = this.aimedContact({ x: (station.x + .5) * TILE, y: (station.y + .5) * TILE });
     return hit?.kind === 'block' && hit.tx === station.x && hit.ty === station.y &&
-      stationRegistry.forBlock(hit.id)?.id === station.definitionId;
+      this.content.stations.forBlock(hit.id)?.id === station.definitionId;
   }
   get stationOpen() { return this.openedStationId !== null; }
   get stationModel() {
     const station = this.openedStationId && this.stations.getById(this.openedStationId);
     if (!station) return undefined;
-    const definition = stationRegistry.get(station.definitionId)!;
+    const definition = this.content.stations.get(station.definitionId)!;
     const copy = (slots: StationInstance['input']) => slots.map(s => s ? { ...s } : null);
     return {
       id: station.id, name: definition.name, definitionId: definition.id, block: B[definition.block],
@@ -258,7 +262,7 @@ export class Expedition {
       targetTemperature: station.energyState.targetTemperature,
       burningFuel: station.energyState.burningFuel ? { ...station.energyState.burningFuel } : null,
       selectedRecipe: station.selectedRecipe,
-      recipes: processingRecipes.compatible(definition).map(r => ({
+      recipes: this.content.processes.compatible(definition).map(r => ({
         id: r.id, name: ITEMS[r.outputs[0].item].name,
       })),
     };
@@ -267,7 +271,7 @@ export class Expedition {
     const station = this.stations.getAt(x, y);
     return station ? { burning: !!station.energyState.burningFuel,
       working: station.process?.status === 'processing' && station.enabled,
-      manual: stationRegistry.get(station.definitionId)?.energy.type === 'manual' } : undefined;
+      manual: this.content.stations.get(station.definitionId)?.energy.type === 'manual' } : undefined;
   }
   stationAction(id: string, action: string, area?: 'input' | 'output' | 'fuel', index?: number, value?: string | number) {
     return this.commands.run(this.actions.stationAction(id, action, area, index, value));
@@ -277,7 +281,7 @@ export class Expedition {
     if (!station || id !== this.openedStationId) return false;
     if (action === 'stop') { this.processing.setManualWork(station, false); return true; }
     if (!this.stationReachable(station)) { this.processing.setManualWork(station, false); return false; }
-    const definition = stationRegistry.get(station.definitionId)!;
+    const definition = this.content.stations.get(station.definitionId)!;
     if (action === 'enable') { station.enabled = !station.enabled; station.revision++; return true; }
     if (action === 'start' && definition.energy.type === 'manual') {
       this.processing.setManualWork(station, true); return true;
@@ -285,7 +289,7 @@ export class Expedition {
     if (action === 'cancel') return this.processing.cancel(station);
     if (action === 'temperature' && typeof value === 'number') return this.processing.setTargetTemperature(station, value);
     if (action === 'recipe' && typeof value === 'string' && !station.process &&
-        processingRecipes.compatible(definition).some(r => r.id === value)) {
+        this.content.processes.compatible(definition).some(r => r.id === value)) {
       station.selectedRecipe = value; station.revision++; return true;
     }
     if (action !== 'slot' || !area || index === undefined || !Number.isInteger(index) ||
@@ -331,7 +335,7 @@ export class Expedition {
     if (undergroundDepth > 4 || !this.raining) return 0;
     const exposure = clamp(1 - Math.max(0, undergroundDepth) / 5, 0, 1);
     const biome = this.terrain.biomeAt(Math.floor(this.player.x / TILE));
-    return biomeRain(biome) * exposure;
+    return this.content.biomeRain(biome) * exposure;
   }
   setZoom(value: number) {
     return this.commands.run(this.actions.setZoom(value));
@@ -391,7 +395,7 @@ export class Expedition {
   private performOpenWorkbench(aim: Point) {
     const target = this.aimedContact(aim);
     if (target?.kind !== 'block' || target.tx !== Math.floor(aim.x / TILE) || target.ty !== Math.floor(aim.y / TILE)) return false;
-    const definition = stationRegistry.forBlock(target.id);
+    const definition = this.content.stations.forBlock(target.id);
     if (definition?.mode === 'processing') {
       const instance = this.stations.getAt(target.tx, target.ty);
       if (!instance) return false;
@@ -503,7 +507,7 @@ export class Expedition {
     if (hit?.kind !== 'entity') return false;
     const mob = hit.entity, m = hit.bounds;
     if (aim.x < m.x || aim.x >= m.x + m.w || aim.y < m.y || aim.y >= m.y + m.h) return false;
-    const asset = EntityRegistry.asset(String(mob.view().kind));
+    const asset = this.content.entities.asset(String(mob.view().kind));
     if (!asset || !('breeding' in asset.config)) return false;
     const item = asset.config.breeding.item;
     if (!this.bag.count(item) || !mob.feed?.()) return false;
@@ -525,7 +529,7 @@ export class Expedition {
         this.world.get(x, y) === B.AIR &&
         !this.mobs.some((m) => Math.abs(m.view().x / TILE - x) < 5)
       ) {
-        const pool = EntityRegistry.spawnPool(this.world.get(x, y + 2), this.world.biomeAt(x));
+        const pool = this.content.entities.spawnPool(this.world.get(x, y + 2), this.world.biomeAt(x));
         const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
         let roll = this.rng.next() * total;
         let selected = pool[0]?.id;
@@ -537,7 +541,7 @@ export class Expedition {
           }
         }
         if (selected) {
-          const entity = EntityRegistry.create(selected, x * TILE, y * TILE, this.rng.int(0, 9999));
+          const entity = this.content.entities.create(selected, x * TILE, y * TILE, this.rng.int(0, 9999));
           if (entity) {
             this.entityRegions.add(entity);
             this.mobs.push(entity);
@@ -694,7 +698,7 @@ export class Expedition {
       this.events.push({ type: 'entityHit', position: { x: m.x + m.w / 2, y: m.y + m.h / 2 } });
       this.wearHeldTool();
       if (mob.dead) {
-        const asset = EntityRegistry.asset(String(m.kind));
+        const asset = this.content.entities.asset(String(m.kind));
         for (const drop of asset && 'drops' in asset.config ? asset.config.drops : []) {
           if (!('item' in drop)) continue;
           const amount = drop.min + Math.floor(this.rng.next() * (drop.max - drop.min + 1));
@@ -805,7 +809,7 @@ export class Expedition {
         const a = aEntity.view();
         const b = bEntity.view();
         if (a.kind !== b.kind || !aEntity.inLove || !bEntity.inLove) continue;
-        const asset = EntityRegistry.asset(String(a.kind));
+        const asset = this.content.entities.asset(String(a.kind));
         if (!asset || !('breeding' in asset.config)) continue;
         if (Math.hypot(a.x - b.x, a.y - b.y) > asset.config.breeding.mateRadius) continue;
         const calf = this.commands.run(this.actions.breed(aEntity, bEntity));
@@ -867,7 +871,7 @@ export class Expedition {
             name:
               hit.kind === 'block'
                 ? BLOCKS[hit.id].name
-                : EntityRegistry.asset(String(hit.entity.view().kind))?.config.name ?? String(hit.entity.view().kind),
+                : this.content.entities.asset(String(hit.entity.view().kind))?.config.name ?? String(hit.entity.view().kind),
           }
         : null,
       swing: this.swing ? {

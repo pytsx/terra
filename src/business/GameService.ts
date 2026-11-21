@@ -1,3 +1,5 @@
+import type { RuntimeContent } from './content/RuntimeContent';
+import { defaultContent } from '../assets/runtime';
 import { Expedition } from './Expedition';
 import type { SaveRepository } from './save';
 export class GameService {
@@ -6,16 +8,16 @@ export class GameService {
     private current: Expedition,
     readonly loadFailed: boolean,
   ) {}
-  static async open(repository: SaveRepository) {
+  static async open(repository: SaveRepository, content: RuntimeContent = defaultContent) {
     try {
       const saved = await repository.load();
       return new GameService(
         repository,
-        new Expedition(saved?.seed ?? 'AURORA-1264', saved ?? undefined),
+        new Expedition({ seed: saved?.seed ?? 'AURORA-1264', content }, saved ?? undefined),
         false,
       );
     } catch {
-      return new GameService(repository, new Expedition('AURORA-1264'), true);
+      return new GameService(repository, new Expedition({ seed: 'AURORA-1264', content }), true);
     }
   }
   get game() {
@@ -23,7 +25,7 @@ export class GameService {
   }
   newWorld(seed: string) {
     const zoom = this.current.magnification;
-    this.current = new Expedition(seed);
+    this.current = new Expedition({ seed, content: this.current.content });
     this.current.setZoom(zoom);
   }
   private writing: Promise<void> | undefined;

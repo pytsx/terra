@@ -12,7 +12,7 @@ export class StationStore {
   private readonly byPosition = new Map<string, StationInstance>();
   private readonly regions = new Map<number, Set<string>>();
   private nextId = 1;
-  constructor(saved?: StationStoreSave) { if (saved) this.restore(saved); }
+  constructor(saved?: StationStoreSave, private readonly definitions = stationRegistry) { if (saved) this.restore(saved); }
   get size() { return this.byId.size; }
   getById(id: string) { return this.byId.get(id); }
   getAt(x: number, y: number) { return this.byPosition.get(key(x, y)); }
@@ -23,7 +23,7 @@ export class StationStore {
       if (existing.definitionId !== definitionId) throw new Error('Estação incompatível na posição');
       return existing;
     }
-    const definition = stationRegistry.get(definitionId);
+    const definition = this.definitions.get(definitionId);
     if (!definition || definition.mode !== 'processing' || !definition.storage) throw new Error(`Estação inválida: ${definitionId}`);
     let id: string;
     do {
@@ -65,7 +65,7 @@ export class StationStore {
   restore(saved: StationStoreSave) {
     this.byId.clear(); this.byPosition.clear(); this.regions.clear(); this.nextId = Number.isSafeInteger(saved.nextId) && saved.nextId > 0 ? saved.nextId : 1;
     for (const record of saved.records) {
-      const definition = stationRegistry.get(record.definitionId);
+      const definition = this.definitions.get(record.definitionId);
       if (!definition || definition.mode !== 'processing' || this.byId.has(record.id) || this.getAt(record.x, record.y)) throw new Error('Instância de estação inválida');
       const suffix = /^station-(\d+)$/.exec(record.id);
       if (suffix) this.nextId = Math.max(this.nextId, Number(suffix[1]) + 1);

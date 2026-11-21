@@ -67,18 +67,29 @@ export class ProcessingRecipeRegistry {
   }
 }
 
-export const stationRegistry = new StationRegistry(production.stations);
-export const processingRecipes = new ProcessingRecipeRegistry(production.processes);
-const reachable = new Set(stationRegistry.values().filter(s => s.mode === 'processing')
-  .flatMap(s => processingRecipes.compatible(s).map(r => r.id)));
-for (const recipe of production.processes)
-  if (!reachable.has(recipe.id)) throw new Error('Processo sem estação compatível: ' + recipe.id);
-export const fuels = new Map<string, FuelDefinition>();
-for (const value of production.fuels) {
-  if (!Object.hasOwn(ITEMS, value.item) || fuels.has(value.item) ||
-      !Number.isFinite(value.burnDuration) || value.burnDuration <= 0 ||
-      !Number.isFinite(value.targetTemperature) || value.targetTemperature < 20) throw new Error('Combustível inválido: ' + value.item);
-  fuels.set(value.item, value);
+export interface ProductionDefinitions {
+  stations: readonly StationDefinition[];
+  processes: readonly ProcessingRecipe[];
+  fuels: readonly FuelDefinition[];
 }
-for (const definition of stationRegistry.values()) if (definition.energy.type === 'thermal')
-  for (const item of definition.energy.acceptedFuels) if (!fuels.has(item)) throw new Error('Combustível sem definição: ' + item);
+
+export function compileProduction(definitions: ProductionDefinitions) {
+  const stationRegistry = new StationRegistry(definitions.stations);
+  const processingRecipes = new ProcessingRecipeRegistry(definitions.processes);
+  const reachable = new Set(stationRegistry.values().filter(s => s.mode === 'processing')
+    .flatMap(s => processingRecipes.compatible(s).map(r => r.id)));
+  for (const recipe of definitions.processes)
+    if (!reachable.has(recipe.id)) throw new Error('Processo sem estação compatível: ' + recipe.id);
+  const fuels = new Map<string, FuelDefinition>();
+  for (const value of definitions.fuels) {
+    if (!Object.hasOwn(ITEMS, value.item) || fuels.has(value.item) ||
+        !Number.isFinite(value.burnDuration) || value.burnDuration <= 0 ||
+        !Number.isFinite(value.targetTemperature) || value.targetTemperature < 20) throw new Error('Combustível inválido: ' + value.item);
+    fuels.set(value.item, value);
+  }
+  for (const definition of stationRegistry.values()) if (definition.energy.type === 'thermal')
+    for (const item of definition.energy.acceptedFuels) if (!fuels.has(item)) throw new Error('Combustível sem definição: ' + item);
+  return { stationRegistry, processingRecipes, fuels };
+}
+
+export const { stationRegistry, processingRecipes, fuels } = compileProduction(production);
