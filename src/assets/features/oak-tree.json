@@ -1,0 +1,10 @@
+{
+  "id": "OAK_TREE",
+  "strategy": "tree",
+  "trunk": "WOOD",
+  "leaves": "LEAF",
+  "replace": ["AIR", "SAPLING"],
+  "minHeight": 5,
+  "heightVariation": 4,
+  "canopy": "broadleaf"
+}

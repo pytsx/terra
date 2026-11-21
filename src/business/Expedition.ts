@@ -21,6 +21,7 @@ import type { ExpeditionSave } from './save';
 import { rainIntensity } from './weather';
 import { SimulationRegion } from './simulation/SimulationRegion';
 import { EntityUpdateGroup } from './simulation/EntityUpdateGroup';
+import { GAME_DAY_SECONDS } from './time';
 import {
   CommandBus,
   SetPlacementModeCommand,
@@ -112,7 +113,8 @@ export class Expedition {
     if (save) {
       this.terrain.importExploration(save.exploration ?? []);
       this.terrain.importEdits(save.edits);
-      this.terrain.restoreEcologicalSoil(save.ecologicalSoil ?? []);
+      this.terrain.restoreNaturalCells(save.naturalCells ?? save.ecologicalSoil ?? []);
+      this.terrain.transformations.restore(save.transformations ?? []);
       this.terrain.hydrology.restore(save.water ?? []);
       if (save.weather) this.terrain.hydrology.weather.restore(save.weather);
       this.terrain.restoreDamage(save.damage ?? []);
@@ -584,7 +586,7 @@ export class Expedition {
     const region = SimulationRegion.around(p);
     const activeMobs = this.entityUpdates.select(this.mobs, region);
     this.activeEntityCount = activeMobs.length;
-    const sunPhase = (this.elapsed / 240 + 0.18) % 1;
+    const sunPhase = (this.elapsed / GAME_DAY_SECONDS + 0.18) % 1;
     const sunlight = sunPhase > 0.52 && sunPhase < 0.94 ? 0 : 1;
     this.terrain.stepBlocks(
       dt,
@@ -709,7 +711,8 @@ export class Expedition {
       generationVersion: this.terrain.generationVersion,
       seed: this.world.seed,
       edits: this.terrain.exportEdits(),
-      ecologicalSoil: this.terrain.exportEcologicalSoil(),
+      naturalCells: this.terrain.exportNaturalCells(),
+      transformations: this.terrain.transformations.save(),
       water: this.terrain.hydrology.save(),
       weather: this.terrain.hydrology.weather.save(),
       weatherMode: this.weatherMode,

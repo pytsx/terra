@@ -1,0 +1,7 @@
+{
+  "name": "Muda de carvalho",
+  "block": "SAPLING",
+  "initial": 0,
+  "kind": "item",
+  "states": { "held": false, "inventory": true, "dropped": true }
+}

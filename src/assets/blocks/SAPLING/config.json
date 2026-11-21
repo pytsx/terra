@@ -1,0 +1,11 @@
+{
+  "id": 21,
+  "name": "Muda de carvalho",
+  "color": "#5f9b45",
+  "solid": false,
+  "hardness": 0.12,
+  "drop": "sapling",
+  "texture": { "base": "#00000000" },
+  "states": { "placed": true, "inventory": true, "dropped": true },
+  "mineTier": 1
+}

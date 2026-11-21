@@ -2,6 +2,7 @@ import type { Slot, Stack } from './catalog';
 export type TileEdit = [index: number, block: number] | [x: number, y: number, block: number];
 export type BlockDamage = [index: number, fraction: number] | [x: number, y: number, fraction: number];
 export type ExploredSection = [chunkX: number, chunkY: number, rle: number[]];
+export type { TransformationStateRecord } from './simulation/TransformationState';
 export interface PlayerSave {
   x: number;
   y: number;
@@ -22,6 +23,8 @@ export interface ExpeditionSave {
   seed: string;
   edits: TileEdit[];
   ecologicalSoil?: [number, number][];
+  naturalCells?: [number, number][];
+  transformations?: import('./simulation/TransformationState').TransformationStateRecord[];
   water?: import('./world/Hydrology').WaterCell[];
   weather?: import('./world/RegionalWeather').WeatherRecord;
   weatherMode?: import('./commands').WeatherMode;

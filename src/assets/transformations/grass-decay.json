@@ -1,0 +1,12 @@
+{
+  "id": "grass.decay",
+  "priority": 10,
+  "source": "GRASS",
+  "conditions": { "all": [
+    { "property": "water.saturation", "operator": "<=", "value": 0 }
+  ] },
+  "duration": { "days": 5, "mode": "continuous" },
+  "probability": 0.5,
+  "retry": "on-condition-reset",
+  "action": { "type": "transformBlock", "to": "DIRT", "preserve": ["waterVolume"] }
+}

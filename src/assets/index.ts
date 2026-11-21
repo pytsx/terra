@@ -10,6 +10,10 @@ export type {
 } from './entity-types';
 export { chaseOrWander, directionToPlayer, distanceToPlayer } from './entity-sdk';
 export type { CraftAsset } from './craft-types';
+export { transformationAssets } from './transformations';
+export type { TransformationAsset, TransformationCondition } from './transformations';
+export { worldFeatureAssets } from './features';
+export type { WorldFeatureAsset } from './features';
 
 import entitySlimeConfig from './entities/slime/config.json';
 import entitySlime from './entities/slime';
@@ -84,6 +88,8 @@ import block_lavaConfig from './blocks/LAVA/config.json';
 import block_lavaScript from './blocks/LAVA';
 import block_ironConfig from './blocks/IRON/config.json';
 import block_ironScript from './blocks/IRON';
+import block_saplingConfig from './blocks/SAPLING/config.json';
+import block_saplingScript from './blocks/SAPLING';
 import item_brickConfig from './items/brick/config.json';
 import item_brickScript from './items/brick';
 import item_coalConfig from './items/coal/config.json';
@@ -122,6 +128,8 @@ import item_stonePickConfig from './items/stonePick/config.json';
 import item_stonePickScript from './items/stonePick';
 import item_ironPickConfig from './items/ironPick/config.json';
 import item_ironPickScript from './items/ironPick';
+import item_saplingConfig from './items/sapling/config.json';
+import item_saplingScript from './items/sapling';
 
 const blocks = {
   "AIR": { config: block_airConfig, script: block_airScript },
@@ -145,6 +153,7 @@ const blocks = {
   "WATER": { config: block_waterConfig, script: block_waterScript },
   "LAVA": { config: block_lavaConfig, script: block_lavaScript },
   "IRON": { config: block_ironConfig, script: block_ironScript },
+  "SAPLING": { config: block_saplingConfig, script: block_saplingScript },
 } as const;
 
 for (const [key, asset] of Object.entries(blocks)) {
@@ -180,6 +189,7 @@ export const modularItems = immutable({
   "iron": { config: item_ironConfig, script: item_ironScript },
   "stonePick": { config: item_stonePickConfig, script: item_stonePickScript },
   "ironPick": { config: item_ironPickConfig, script: item_ironPickScript },
+  "sapling": { config: item_saplingConfig, script: item_saplingScript },
   "leatherHelmet": { config: item_leatherHelmetConfig, script: item_leatherHelmetScript },
   "leatherChestplate": { config: item_leatherChestplateConfig, script: item_leatherChestplateScript },
   "leatherLeggings": { config: item_leatherLeggingsConfig, script: item_leatherLeggingsScript },

@@ -1,0 +1,12 @@
+{
+  "id": "stone.weathering",
+  "priority": 30,
+  "source": "STONE",
+  "conditions": { "all": [
+    { "property": "water.saturation", "operator": ">=", "value": 1 }
+  ] },
+  "duration": { "days": 5, "mode": "continuous" },
+  "probability": 0.1,
+  "retry": "on-condition-reset",
+  "action": { "type": "transformBlock", "to": "GRAVEL", "preserve": ["waterVolume"] }
+}

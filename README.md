@@ -122,6 +122,16 @@ O cascalho aparece principalmente sob a terra, atravessando a transição para a
 
 A arquitetura adapta ao jogo 2D as ideias de cavernas de ruído, aquíferos locais e roteamento de funções de densidade apresentadas na geração moderna do Minecraft. As ilhas flutuantes são uma extensão própria do projeto.
 
+## Transformações ambientais
+
+As regras em `src/assets/transformations` declaram bloco de origem e destino, condições compostas por `all`, `any` e `not`, duração contínua, probabilidade, repetição e estado preservado. O Registry valida os JSON e resolve os blocos pelo catálogo; o Evaluator interpreta somente sensores e operadores registrados, sem executar código fornecido pelos assets.
+
+O scheduler acompanha estados esparsos apenas nas células elegíveis da região ativa e reutiliza as partições da simulação. Um dia possui 240 segundos, definidos em uma única constante. Sorteios derivam da seed, coordenadas, identificador da regra e número da tentativa, portanto não dependem da ordem de processamento dos chunks. O progresso pausa fora da região ativa e sobrevive ao save.
+
+As regras iniciais implementam intemperismo de pedra saturada, crescimento de grama em terra saturada exposta ao céu e desaparecimento de grama seca. Transformações conservam o volume absoluto de água quando solicitado. Como a pedra armazena `0,08` unidade e o gravel armazena `2`, uma pedra saturada produz gravel com `4%` de saturação; as capacidades existentes não foram rebalanceadas.
+
+O motor é um `WorldEvolutionSystem`: além de `transformBlock`, regras podem executar `placeFeature`. Uma muda de carvalho com ao menos `60%` de saturação e exposição ao céu por três dias realiza uma tentativa determinística de `35%` para criar `OAK_TREE`. A árvore é planejada pelo mesmo construtor de tronco e copa usado na geração inicial. O `World` valida o plano completo antes de aplicá-lo, portanto construções, células protegidas ou falta de espaço cancelam toda a operação sem deixar uma árvore parcial.
+
 ## Entidades, drops e reprodução
 
 Entidades ficam em `src/assets/entities/<id>/` e têm configuração, estados e um `brain.ts` modular. A vaca é pacífica, o lobo é agressivo e o slime é hostil. Somente entidades próximas ao jogador executam seu brain.

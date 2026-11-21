@@ -18,8 +18,10 @@ const GRAVEL_PULL_RATE = 0.9;
 const MAX_AQUIFER_LINK_DEPTH = 160;
 const liquid = (id: number) => id === B.AIR || id === B.WATER || id === B.LAVA || id === B.TORCH;
 const capacity = (id: number) => liquid(id) ? full : Math.round((BLOCKS[id].waterCapacity ?? 0) * full);
+export interface WaterState { volume: number; capacity: number; saturation: number }
 
 export class Hydrology {
+  private readonly listeners = new Set<(x: number, y: number) => void>();
   readonly weather = new RegionalWeather();
   private readonly columns = new Map<number, Map<number, number>>();
   private clock = 0;
@@ -44,6 +46,16 @@ export class Hydrology {
 
   amount(x: number, y: number, block: number) {
     return this.columns.get(x)?.get(y) ?? (block === B.WATER ? full : 0);
+  }
+
+  state(x: number, y: number, block: number): WaterState {
+    const stored = this.amount(x, y, block), cap = capacity(block);
+    return { volume: stored / full, capacity: cap / full, saturation: cap > 0 ? stored / cap : 0 };
+  }
+
+  onChanged(listener: (x: number, y: number) => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   visible(x: number, y: number, block: number) {
@@ -76,16 +88,21 @@ export class Hydrology {
   }
 
   private write(x: number, y: number, block: number, amount: number) {
+    const previous = this.amount(x, y, block);
     let column = this.columns.get(x);
     if (amount === (block === B.WATER ? full : 0)) {
       column?.delete(y);
       if (!column?.size) this.columns.delete(x);
       this.directions.delete(`${x},${y}`);
+      if (previous !== amount) for (const listener of this.listeners) listener(x, y);
       return;
     }
     if (!column) this.columns.set(x, column = new Map());
     column.set(y, amount);
+    if (previous !== amount) for (const listener of this.listeners) listener(x, y);
   }
+
+  clear(x: number, y: number, block: number) { this.write(x, y, block, 0); }
 
   drink(x: number, y: number, block: number, demand: number) {
     const available = this.amount(x, y, block);

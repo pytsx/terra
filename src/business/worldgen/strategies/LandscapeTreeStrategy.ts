@@ -1,9 +1,11 @@
 import { rand01 } from '../../../shared/math';
 import type { GenerationContext } from '../types';
 import type { GenerationStrategy, ResolvedTreeFeature } from '../features/types';
+import { TreeStructurePlanner } from '../features/TreeStructurePlanner';
 
 export class LandscapeTreeStrategy implements GenerationStrategy<ResolvedTreeFeature> {
   readonly name = 'landscape-tree';
+  private readonly planner = new TreeStructurePlanner();
   constructor(private readonly margin = 4) {}
 
   generate(context: GenerationContext, features: readonly ResolvedTreeFeature[]) {
@@ -19,14 +21,10 @@ export class LandscapeTreeStrategy implements GenerationStrategy<ResolvedTreeFea
       const height = (conifer ? feature.minHeight + 3 : feature.minHeight) +
         Math.floor(rand01(cell, 5, context.seed) * feature.heightVariation);
       if (y < context.startY || y - height - 2 >= context.endY) continue;
-      for (let dy = 1; dy <= height; dy++) context.set(x, y - dy, feature.trunk);
-      for (let dy = -2; dy <= (conifer ? 5 : 2); dy++) {
-        const radius = conifer ? Math.floor((dy + 3) / 2) : 4 - Math.abs(dy);
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (feature.replaceLeaves.has(context.get(x + dx, y - height + dy)))
-            context.set(x + dx, y - height + dy, feature.leaves);
-        }
-      }
+      for (const placement of this.planner.plan(x, y - 1, height, feature.trunk, feature.leaves,
+        conifer ? 'conifer' : 'broadleaf'))
+        if (placement.block === feature.trunk || feature.replaceLeaves.has(context.get(placement.x, placement.y)))
+          context.set(placement.x, placement.y, placement.block);
     }
   }
 }

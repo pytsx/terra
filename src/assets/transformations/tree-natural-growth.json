@@ -1,0 +1,13 @@
+{
+  "id": "tree.natural-growth",
+  "priority": 15,
+  "source": "SAPLING",
+  "conditions": { "all": [
+    { "property": "water.saturation", "operator": ">=", "value": 0.6 },
+    { "property": "environment.exposedToSky", "operator": "==", "value": true }
+  ] },
+  "duration": { "days": 3, "mode": "continuous" },
+  "probability": 0.35,
+  "retry": "on-condition-reset",
+  "action": { "type": "placeFeature", "feature": "OAK_TREE", "replaceSource": true }
+}

@@ -8,6 +8,8 @@ import { ChunkStore } from './ChunkStore';
 import { ExplorationMap } from './ExplorationMap';
 import { BlockPartitionScheduler, BLOCK_PARTITION_COUNT, blockPartitionAt } from '../simulation/BlockPartitionScheduler';
 import type { SimulationRegion } from '../simulation/SimulationRegion';
+import { WorldEvolutionSystem } from '../simulation/WorldEvolutionSystem';
+import type { FeaturePlan } from '../worldgen/FeatureGenerator';
 
 import { Hydrology } from './Hydrology';
 import { CommandBus } from '../commands/CommandBus';
@@ -22,7 +24,7 @@ export interface BlockEdit {
 }
 
 interface CellState {
-  ecological?: boolean;
+  natural?: boolean;
   damage?: number;
 }
 
@@ -33,12 +35,20 @@ export class World {
     setBlock: defineCommand('setBlock', (x: number, y: number, id: number) => this.writeBlock(x, y, id)),
     mineBlock: defineCommand('mineBlock', this.applyMining.bind(this)),
     changeHabitat: defineCommand('changeHabitat', this.applyHabitatChange.bind(this)),
+    transformBlock: defineCommand('transformBlock', this.applyNaturalTransformation.bind(this)),
+    placeFeature: defineCommand('placeFeature', this.applyNaturalFeature.bind(this)),
   };
   readonly hydrology = new Hydrology();
+  readonly evolution = new WorldEvolutionSystem();
+  /** Compatibility alias for saves and integrations from the transformation-only version. */
+  readonly transformations = this.evolution;
   private readonly blockUpdates: BlockPartitionScheduler;
 
   waterAt(x: number, y: number, block = this.get(x, y)) {
     return this.hydrology.visible(x, y, block);
+  }
+  waterStateAt(x: number, y: number, block = this.get(x, y)) {
+    return this.hydrology.state(x, y, block);
   }
   waterFlowingAt(x: number, y: number, block = this.get(x, y)) {
     return this.hydrology.flowing(this, x, y, block);
@@ -63,28 +73,66 @@ export class World {
   private readonly edits = new Map<number, Map<number, number>>();
   private readonly damage = new Map<string, Map<number, number>>();
   private readonly falling = new Set<string>();
-  private readonly ecologicalSoil = new Set<string>();
+  private readonly naturalCells = new Set<string>();
 
   changeHabitat(x: number, y: number, from: number, to: number) {
     return this.commands.run(this.actions.changeHabitat(x, y, from, to));
   }
   private applyHabitatChange(x: number, y: number, from: number, to: number) {
     if (!this.inside(x, y) || this.get(x, y) !== from) return false;
-    if (this.edited(x, y) && !this.ecologicalSoil.has(this.key(x, y))) return false;
-    this.writeBlock(x, y, to, { ecological: to === B.DIRT || to === B.GRASS });
+    if (this.edited(x, y) && !this.naturalCells.has(this.key(x, y))) return false;
+    this.writeBlock(x, y, to, { natural: true });
     return true;
   }
 
-  exportEcologicalSoil(): [number, number][] {
-    return [...this.ecologicalSoil].map(key => this.coords(key));
+  canTransformNaturally(x: number, y: number) {
+    return !this.edited(x, y) || this.naturalCells.has(this.key(x, y));
+  }
+  transformNaturally(x: number, y: number, from: number, to: number, preserveWaterVolume: boolean) {
+    return this.commands.run(this.actions.transformBlock(x, y, from, to, preserveWaterVolume));
+  }
+  private applyNaturalTransformation(x: number, y: number, from: number, to: number, preserveWaterVolume: boolean) {
+    if (!this.inside(x, y) || this.get(x, y) !== from || !this.canTransformNaturally(x, y)) return false;
+    if (!preserveWaterVolume) this.hydrology.clear(x, y, from);
+    this.writeBlock(x, y, to, { natural: true });
+    return true;
+  }
+  placeNaturalFeature(x: number, y: number, source: number, plan: FeaturePlan | undefined, replaceSource: boolean) {
+    return this.commands.run(this.actions.placeFeature(x, y, source, plan, replaceSource));
+  }
+  private applyNaturalFeature(x: number, y: number, source: number, plan: FeaturePlan | undefined,
+    replaceSource: boolean) {
+    if (!plan || this.get(x, y) !== source || !this.canTransformNaturally(x, y)) return false;
+    const placements = replaceSource ? plan.placements : plan.placements.filter(cell => cell.x !== x || cell.y !== y);
+    if (!placements.length || placements.some(cell => !this.validCell(cell.x, cell.y, cell.block) ||
+      !this.canTransformNaturally(cell.x, cell.y) || !plan.replace.has(this.get(cell.x, cell.y)))) return false;
+    for (const cell of placements) this.writeBlock(cell.x, cell.y, cell.block, { natural: true });
+    return true;
   }
 
-  restoreEcologicalSoil(cells: readonly [number, number][]) {
+  exposedToSky(x: number, y: number) {
+    if (!this.inside(x, y)) return false;
+    for (let row = y - 1; row >= 0; row--) {
+      const block = this.peek(x, row);
+      if (block === undefined || (block !== B.AIR && block !== B.WATER && block !== B.LAVA && block !== B.TORCH))
+        return false;
+    }
+    return true;
+  }
+
+  exportNaturalCells(): [number, number][] {
+    return [...this.naturalCells].map(key => this.coords(key));
+  }
+
+  restoreNaturalCells(cells: readonly [number, number][]) {
     for (const [x, y] of cells) {
       const block = this.recordedBlock(x, y);
-      if (block === B.DIRT || block === B.GRASS) this.ecologicalSoil.add(this.key(x, y));
+      if (block !== undefined) this.naturalCells.add(this.key(x, y));
     }
   }
+  /** Compatibility with saves produced before natural structures existed. */
+  exportEcologicalSoil() { return this.exportNaturalCells(); }
+  restoreEcologicalSoil(cells: readonly [number, number][]) { this.restoreNaturalCells(cells); }
   private fallTime = 0;
   private readonly partitionFallTime = new Float64Array(BLOCK_PARTITION_COUNT);
   readonly spawnX: number;
@@ -113,7 +161,9 @@ export class World {
       this.blockUpdates.invalidateNeighborhood(x, y);
       this.queueFall(x, y);
       this.queueFall(x, y - 1);
+      this.evolution.invalidate(x, y);
     });
+    this.hydrology.onChanged((x, y) => this.blockUpdates.invalidate(x, y));
     if (this.infinite) this.onBlockEdited(({ x, y, block }) => this.survey.update(x, y, block));
     if (generationVersion === 1) this.generateLegacy();
     else if (generationVersion === 2) modernPipeline.run(createGenerationContext({
@@ -204,8 +254,8 @@ export class World {
   }
   private commitEdit(edit: BlockEdit, state?: CellState) {
     const { x, y, block } = edit;
-    if (state?.ecological) this.ecologicalSoil.add(this.key(x, y));
-    else this.ecologicalSoil.delete(this.key(x, y));
+    if (state?.natural) this.naturalCells.add(this.key(x, y));
+    else this.naturalCells.delete(this.key(x, y));
     this.recordEdit(x, y, block);
     this.setDamage(x, y, state?.damage ?? 0);
     Object.freeze(edit);
@@ -330,16 +380,19 @@ export class World {
     for (const partition of batch.partitions)
       this.stepGravity(partition.elapsed, occupied, onDisplace,
         { region, partition: partition.id }, movedThisFrame);
+    for (const partition of batch.partitions)
+      this.evolution.step(partition.elapsed, this, region, partition.id);
     this.hydrology.step(batch.frameElapsed, this, region.centerX, region.centerY,
       rain, sunlight, batch.primary.id, region);
   }
 
   get blockUpdateStats() {
-    return { ...this.blockUpdates.stats, priorityFluids: this.hydrology.activeFluidCount };
+    return { ...this.blockUpdates.stats, priorityFluids: this.hydrology.activeFluidCount,
+      transformations: this.evolution.trackedCells };
   }
   solid(x: number, y: number) {
     const block = this.get(x, y);
-    if ((block === B.WOOD || block === B.LEAF) && !this.edited(x, y)) return false;
+    if ((block === B.WOOD || block === B.LEAF) && this.canTransformNaturally(x, y)) return false;
     return BLOCKS[block].solid;
   }
   heightAt(x: number) {

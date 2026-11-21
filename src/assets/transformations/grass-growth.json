@@ -1,0 +1,13 @@
+{
+  "id": "grass.growth",
+  "priority": 20,
+  "source": "DIRT",
+  "conditions": { "all": [
+    { "property": "water.saturation", "operator": ">=", "value": 1 },
+    { "property": "environment.exposedToSky", "operator": "==", "value": true }
+  ] },
+  "duration": { "days": 1, "mode": "continuous" },
+  "probability": 0.5,
+  "retry": "on-condition-reset",
+  "action": { "type": "transformBlock", "to": "GRASS", "preserve": ["waterVolume"] }
+}
