@@ -1,0 +1,12 @@
+{
+  "name": "Terra",
+  "block": "DIRT",
+  "initial": 30,
+  "slot": 1,
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

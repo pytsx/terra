@@ -1,0 +1,7 @@
+{
+  "name": "Ferro",
+  "block": "IRON",
+  "kind": "material",
+  "color": "#b8b6aa",
+  "states": { "inventory": true, "dropped": true }
+}

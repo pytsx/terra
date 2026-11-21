@@ -1,0 +1,10 @@
+{
+  "name": "Ouro",
+  "block": "GOLD",
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

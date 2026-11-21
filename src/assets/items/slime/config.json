@@ -1,0 +1,6 @@
+{
+  "name": "Gosma de slime",
+  "kind": "material",
+  "color": "#68bd91",
+  "states": {"inventory": true, "dropped": true}
+}

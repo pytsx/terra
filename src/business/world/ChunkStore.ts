@@ -1,0 +1,53 @@
+import type { TerrainColumn } from '../worldgen/TerrainColumn';
+
+interface Chunk {
+  terrain: TerrainColumn;
+  sections: Map<number, Uint16Array>;
+}
+
+const MAX_COLUMNS = 64;
+
+export class ChunkStore {
+  private readonly columns = new Map<number, Chunk>();
+
+  constructor(
+    private readonly sectionCount: number,
+    private readonly generateColumn: (cx: number) => TerrainColumn,
+    private readonly restoreSection: (cx: number, cy: number, cells: Uint16Array) => void,
+    private readonly evicted: (cx: number) => void,
+  ) {}
+
+  get size() { return this.columns.size; }
+
+  private column(cx: number) {
+    let chunk = this.columns.get(cx);
+    if (!chunk) {
+      chunk = { terrain: this.generateColumn(cx), sections: new Map() };
+      for (let cy = 0; cy < this.sectionCount; cy++) {
+        const cells = chunk.terrain.generate(cy);
+        this.restoreSection(cx, cy, cells);
+        chunk.sections.set(cy, cells);
+      }
+      this.columns.set(cx, chunk);
+      if (this.columns.size > MAX_COLUMNS) {
+        const oldest = this.columns.keys().next().value!;
+        this.columns.delete(oldest);
+        this.evicted(oldest);
+      }
+    }
+    return chunk;
+  }
+
+  terrain(cx: number) { return this.column(cx).terrain; }
+
+  peek(cx: number, cy: number) { return this.columns.get(cx)?.sections.get(cy); }
+
+  section(cx: number, cy: number) {
+    const column = this.column(cx);
+    return column.sections.get(cy)!;
+  }
+
+  materializedColumns() {
+    return [...this.columns].filter(([, chunk]) => chunk.sections.size > 0).map(([cx]) => cx);
+  }
+}

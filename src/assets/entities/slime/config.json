@@ -1,0 +1,19 @@
+{
+  "id": "slime",
+  "name": "Slime",
+  "width": 22,
+  "height": 17,
+  "activeRadius": 340,
+  "health": 3,
+  "peaceful": false,
+  "spawn": {"weight": 28},
+  "drops": [
+    {"item": "slime", "min": 1, "max": 2}
+  ],
+  "states": {
+    "world": true,
+    "active": true,
+    "dormant": true,
+    "dead": true
+  }
+}

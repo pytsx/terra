@@ -1,0 +1,9 @@
+{
+  "name": "Peitoral de couro",
+  "kind": "armor",
+  "icon": "leatherChestplate",
+  "unique": true,
+  "color": "#9d603c",
+  "armor": { "slot": "chest", "bonusLife": 2, "durability": 110 },
+  "states": { "inventory": true, "dropped": true }
+}

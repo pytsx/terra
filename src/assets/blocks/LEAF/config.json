@@ -1,0 +1,26 @@
+{
+  "id": 9,
+  "name": "Folhagem",
+  "color": "#4e9870",
+  "solid": false,
+  "hardness": 0.18,
+  "drop": "wood",
+  "texture": {
+    "base": "#307352",
+    "grain": {
+      "count": 50,
+      "colors": [
+        "#397f55",
+        "#57aa70",
+        "#69b982"
+      ],
+      "max": 4
+    }
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 1
+}

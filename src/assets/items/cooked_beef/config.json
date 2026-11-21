@@ -1,0 +1,7 @@
+{
+  "name": "Carne assada",
+  "kind": "consumable",
+  "color": "#8a4938",
+  "use": {"effect": "heal", "amount": 4},
+  "states": {"inventory": true, "dropped": true}
+}

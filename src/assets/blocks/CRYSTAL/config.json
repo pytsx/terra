@@ -1,0 +1,34 @@
+{
+  "id": 7,
+  "name": "Cristal",
+  "color": "#72e2e1",
+  "solid": true,
+  "hardness": 1.12,
+  "drop": "crystal",
+  "texture": {
+    "base": "#81899c",
+    "grain": {
+      "count": 38,
+      "colors": [
+        "#a1a7b5",
+        "#6d768c",
+        "#8f98a6"
+      ],
+      "max": 4
+    },
+    "veins": [
+      "#4ac3c6",
+      "#8cf3f0"
+    ]
+  },
+  "light": {
+    "radius": 41,
+    "power": 0.45
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 5
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Tijolos",
+  "block": "BRICK",
+  "initial": 0,
+  "slot": 7,
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

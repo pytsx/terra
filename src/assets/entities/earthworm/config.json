@@ -1,0 +1,19 @@
+{
+  "diet": {"food":"detritus","poreWater":true},
+  "id": "earthworm",
+  "name": "Minhoca",
+  "width": 14,
+  "height": 5,
+  "speed": 10,
+  "interval": 4.5,
+  "health": 2,
+  "activeRadius": 2160,
+  "substrate": [
+    "GRASS",
+    "DIRT"
+  ],
+  "spawn": {
+    "biomes": ["Floresta temperada"],
+    "weight": 16
+  }
+}

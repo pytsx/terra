@@ -1,0 +1,16 @@
+{
+  "name": "Tocha",
+  "block": "TORCH",
+  "initial": 16,
+  "slot": 5,
+  "kind": "item",
+  "place": {
+    "block": "TORCH",
+    "quickPlace": true
+  },
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

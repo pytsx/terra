@@ -1,0 +1,10 @@
+{
+  "name": "Cristal",
+  "block": "CRYSTAL",
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

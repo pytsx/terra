@@ -1,0 +1,60 @@
+{
+  "id": 11,
+  "name": "Tocha",
+  "color": "#ffc16d",
+  "solid": false,
+  "hardness": 0.08,
+  "drop": "torch",
+  "spawnDecoration": {
+    "offsets": [
+      -5,
+      5
+    ]
+  },
+  "texture": {
+    "base": "transparent",
+    "detail": [
+      {
+        "x": 10,
+        "y": 9,
+        "w": 4,
+        "h": 13,
+        "color": "#6a4a34"
+      },
+      {
+        "x": 8,
+        "y": 4,
+        "w": 8,
+        "h": 8,
+        "color": "#ef9c49"
+      },
+      {
+        "x": 10,
+        "y": 1,
+        "w": 4,
+        "h": 8,
+        "color": "#ffe38f"
+      },
+      {
+        "x": 11,
+        "y": 3,
+        "w": 2,
+        "h": 4,
+        "color": "#fff7c6"
+      }
+    ]
+  },
+  "light": {
+    "radius": 131,
+    "power": 0.92,
+    "flicker": 3,
+    "offsetY": 7,
+    "glow": "rgba(255,207,111,.33)"
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 1
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Picareta de cristal",
+  "icon": "crystalPick",
+  "kind": "tool",
+  "unique": true,
+  "tool": {
+    "role": "mining",
+    "mineTier": 6,
+    "miningMultiplier": 2.1,
+    "durability": 480
+  },
+  "hit": {"damage": 4, "reach": 48, "cooldown": 0.28},
+  "states": {"held": true, "inventory": true, "dropped": true}
+}

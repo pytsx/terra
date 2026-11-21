@@ -1,0 +1,125 @@
+[
+  {
+    "pattern": [["wood", "wood"]],
+    "output": {
+      "item": "plank",
+      "amount": 6
+    }
+  },
+  {
+    "pattern": [["coal"], ["wood"]],
+    "output": {
+      "item": "torch",
+      "amount": 5
+    }
+  },
+  {
+    "pattern": [
+      ["stone", "copper"],
+      ["stone", "stone"]
+    ],
+    "output": {
+      "item": "brick",
+      "amount": 4
+    }
+  },
+  {
+    "pattern": [
+      ["plank", "plank"],
+      ["plank", "plank"]
+    ],
+    "output": {
+      "item": "workbench",
+      "amount": 1
+    }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["plank", "plank", "plank"], [null, "wood", null], [null, "wood", null]],
+    "output": { "item": "pickaxe", "amount": 1 }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["stone", "stone", "stone"], [null, "wood", null], [null, "wood", null]],
+    "output": { "item": "stonePick", "amount": 1 }
+  },
+  {
+    "pattern": [
+      ["copper", "copper", "copper"],
+      ["wood", "copper", "wood"],
+      [null, "wood", null]
+    ],
+    "output": {
+      "item": "copperPick",
+      "amount": 1
+    }
+  },
+  {
+    "pattern": [
+      [null, "torch", null],
+      ["torch", "crystal", "torch"],
+      [null, "crystal", null]
+    ],
+    "output": {
+      "item": "lantern",
+      "amount": 1
+    }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["raw_meat"]],
+    "output": {
+      "item": "cooked_beef",
+      "amount": 1
+    }
+  },
+  {
+    "station": "workbench",
+    "pattern": [
+      [null, "crystal", null],
+      [null, "copper", null],
+      [null, "wood", null]
+    ],
+    "output": {
+      "item": "sword",
+      "amount": 1
+    }
+  },
+  {
+    "station": "workbench",
+    "pattern": [
+      ["crystal", "crystal", "crystal"],
+      [null, "wood", null],
+      [null, "wood", null]
+    ],
+    "output": {
+      "item": "crystalPick",
+      "amount": 1
+    }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["iron", "iron", "iron"], [null, "wood", null], [null, "wood", null]],
+    "output": { "item": "ironPick", "amount": 1 }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["leather", "leather", "leather"], ["leather", null, "leather"]],
+    "output": { "item": "leatherHelmet", "amount": 1 }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["leather", null, "leather"], ["leather", "leather", "leather"], ["leather", "leather", "leather"]],
+    "output": { "item": "leatherChestplate", "amount": 1 }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["leather", "leather", "leather"], ["leather", null, "leather"], ["leather", null, "leather"]],
+    "output": { "item": "leatherLeggings", "amount": 1 }
+  },
+  {
+    "station": "workbench",
+    "pattern": [["leather", null, "leather"], ["leather", null, "leather"]],
+    "output": { "item": "leatherBoots", "amount": 1 }
+  }
+]

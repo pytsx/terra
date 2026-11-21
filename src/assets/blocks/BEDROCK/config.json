@@ -1,0 +1,25 @@
+{
+  "id": 13,
+  "name": "Rocha matriz",
+  "color": "#292d3c",
+  "solid": true,
+  "hardness": null,
+  "drop": null,
+  "texture": {
+    "grain": {
+      "count": 38,
+      "colors": [
+        "#333848",
+        "#222535",
+        "#3f4456"
+      ],
+      "max": 4
+    }
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 99
+}

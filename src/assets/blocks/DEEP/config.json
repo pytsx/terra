@@ -1,0 +1,25 @@
+{
+  "id": 4,
+  "name": "Rocha profunda",
+  "color": "#53576e",
+  "solid": true,
+  "hardness": 1.05,
+  "drop": "stone",
+  "texture": {
+    "grain": {
+      "count": 38,
+      "colors": [
+        "#646a81",
+        "#464b63",
+        "#74768b"
+      ],
+      "max": 4
+    }
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 3
+}

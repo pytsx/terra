@@ -1,0 +1,26 @@
+{
+  "id": 3,
+  "name": "Pedra",
+  "color": "#7d8196",
+  "solid": true,
+  "hardness": 0.77,
+  "drop": "stone",
+  "texture": {
+    "base": "#81899c",
+    "grain": {
+      "count": 38,
+      "colors": [
+        "#a1a7b5",
+        "#6d768c",
+        "#8f98a6"
+      ],
+      "max": 4
+    }
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 2
+}

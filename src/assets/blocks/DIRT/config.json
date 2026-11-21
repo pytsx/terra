@@ -1,0 +1,26 @@
+{
+  "id": 2,
+  "name": "Terra",
+  "color": "#967044",
+  "solid": true,
+  "hardness": 0.28,
+  "drop": "dirt",
+  "texture": {
+    "base": "#84603f",
+    "grain": {
+      "count": 32,
+      "colors": [
+        "#765339",
+        "#9e784b",
+        "#aa8051"
+      ],
+      "max": 4
+    }
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 1
+}

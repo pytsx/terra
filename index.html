@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#182823" />
+    <title>Terra / Matriz — Expedição</title>
+  </head>
+  <body>
+    <main id="stage" aria-label="Terra / Matriz">
+      <canvas
+        id="game"
+        tabindex="0"
+        aria-label="Mundo procedural. Use A e D para andar, Espaço para pular e H para ver os controles."
+      ></canvas>
+      <header class="toolbar">
+        <button class="brand panel" data-action="menu" title="Menu da expedição (Esc)">
+          <span class="brand-icon" aria-hidden="true">▤</span><span>Terra <em>/</em> Matriz</span>
+        </button>
+        <div class="tools">
+          <div class="zoom panel">
+            <button data-action="zoom-out" aria-label="Diminuir zoom">−</button
+            ><output id="zoomLabel">100%</output
+            ><button data-action="zoom-in" aria-label="Aumentar zoom">+</button>
+          </div>
+          <button class="panel bag-button" data-action="inventory">
+            <span class="bag-icon" aria-hidden="true"></span>Mochila <kbd>E</kbd>
+          </button>
+        </div>
+      </header>
+      <section class="vitals panel" aria-label="Vida"><span id="hearts"></span></section>
+      <button
+        class="map panel"
+        data-action="world-map"
+        aria-haspopup="dialog"
+        aria-label="Abrir mapa do mundo (G)"
+        title="Ampliar mapa (G)"
+      >
+        <span class="map-heading"><span>Mapa local ↗</span><span id="coordinate"></span></span>
+        <canvas id="minimap" width="180" height="64" aria-label="Minimapa do terreno"></canvas>
+        <span id="region"></span>
+      </button>
+      <div class="belt">
+        <div class="belt-label" id="selectedName"></div>
+        <nav id="hotbar" class="panel" aria-label="Barra rápida"></nav>
+      </div>
+      <div class="hint panel">
+        <kbd>A D</kbd> mover <kbd>Espaço</kbd> pular <kbd>T</kbd> terminal
+        <button data-action="help" aria-label="Controles do jogo">?</button>
+      </div>
+      <section id="gameTerminal" class="game-terminal" aria-label="Terminal de comandos" hidden>
+        <header>
+          <span><i aria-hidden="true">›_</i> Terminal do mundo</span>
+          <small><kbd>Esc</kbd> fechar</small>
+        </header>
+        <div id="terminalOutput" class="terminal-output" role="log" aria-live="polite"></div>
+        <form id="terminalForm" autocomplete="off">
+          <label for="terminalInput" aria-hidden="true">›</label>
+          <input id="terminalInput" spellcheck="false" autocomplete="off"
+            placeholder="Digite /help ou /weather rain" aria-label="Comando" />
+        </form>
+      </section>
+      <div id="toast" role="status"></div>
+    </main>
+    <dialog id="inventory" aria-labelledby="bag-title" class="game-modal backpack">
+      <header class="bag-head">
+        <div class="pack-emblem" id="packEmblem" aria-hidden="true">
+          <span class="bag-icon"></span>
+        </div>
+        <div>
+          <span class="overline" id="bagSeed"></span>
+          <h1 id="bag-title">Mochila de campo</h1>
+        </div>
+        <button class="close" data-action="close" aria-label="Fechar mochila">×</button>
+      </header>
+      <div class="bag-body">
+        <aside class="recipe-book" aria-label="Livro de receitas fabricáveis">
+          <div class="recipe-book-head"><span aria-hidden="true">📖</span><strong>Receitas</strong></div>
+          <p>Somente receitas disponíveis</p>
+          <div id="recipeBookGrid" class="recipe-book-grid"></div>
+          <small id="recipeBookEmpty">Nenhuma receita pode ser feita agora.</small>
+        </aside>
+        <section class="inventory-board">
+          <div class="inventory-top">
+            <div id="equipmentSlots" class="equipment-slots" role="group" aria-label="Slots de armadura"></div>
+            <canvas id="playerPreview" class="player-preview" width="96" height="128" aria-label="Visual do explorador equipado"></canvas>
+            <div class="craft-station">
+              <div class="section-title"><h2>Crafting</h2><span id="craftSize"></span></div>
+              <div class="craft-flow">
+                <div id="craftGrid" class="craft-grid" role="group" aria-label="Grade de fabricação"></div>
+                <span class="craft-arrow" aria-hidden="true">→</span>
+                <div class="output">
+                  <button id="craftResult" class="cell" aria-label="Resultado" disabled></button>
+                  <span id="resultName">Resultado</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="storage-label">Inventário</div>
+          <div id="packSlots" class="slot-grid" role="group" aria-label="Slots da mochila"></div>
+          <div id="beltSlots" class="slot-grid belt-grid" role="group" aria-label="Organizar barra rápida"></div>
+        </section>
+      </div>
+      <footer class="bag-foot">
+        <span
+          >Clique para pegar ou soltar uma pilha. Com um item na mão, arraste por vários slots para
+          visualizar e confirmar a divisão ao soltar.</span
+        ><span id="bagFeedback" role="status"></span>
+      </footer>
+      <div id="cursorStack" class="cursor-stack" hidden aria-live="polite"></div>
+    </dialog>
+    <dialog id="world-map" aria-labelledby="map-title" class="game-modal">
+      <header class="dialog-head">
+        <div>
+          <span class="overline" id="mapSeed"></span>
+          <h1 id="map-title">Mapa do mundo</h1>
+        </div>
+        <div class="map-controls" aria-label="Controles do mapa">
+          <button data-action="map-zoom-out" aria-label="Afastar mapa">−</button>
+          <output id="mapZoomLabel">100%</output>
+          <button data-action="map-zoom-in" aria-label="Aproximar mapa">+</button>
+          <button data-action="map-center">Centralizar no jogador</button>
+        </div>
+        <button class="close" data-action="close" aria-label="Fechar mapa">×</button>
+      </header>
+      <canvas
+        id="worldMapCanvas"
+        width="700"
+        height="158"
+        aria-label="Região gerada do mundo com a posição do explorador"
+      ></canvas>
+      <footer class="dialog-foot map-legend">
+        <span id="mapPosition"></span>
+        <span id="mapViewPosition"></span>
+        <span>Arraste para navegar · roda para zoom · duplo clique para centralizar</span>
+        <span><kbd>Esc</kbd> Voltar</span>
+      </footer>
+    </dialog>
+    <dialog id="menu" aria-labelledby="menu-title" class="game-modal">
+      <header class="dialog-head">
+        <div>
+          <span class="overline" id="menuSeed"></span>
+          <h1 id="menu-title">Expedição pausada</h1>
+        </div>
+        <button class="close" data-action="close" aria-label="Fechar menu">×</button>
+      </header>
+      <div class="menu-list">
+        <button class="primary" data-action="close">Continuar expedição</button
+        ><button data-action="inventory">Mochila e bancada <kbd>E</kbd></button
+        ><button data-action="help">Controles <kbd>H</kbd></button
+        ><button data-action="save">Salvar mundo</button
+        ><button data-action="audio" aria-pressed="false">Som dos impactos · desligado</button
+        ><button data-action="fullscreen">Alternar tela cheia</button
+        ><button data-action="new-world">Criar outro mundo</button>
+      </div>
+      <div class="objectives">
+        <div>Explorar cavernas <strong id="goalDepth"></strong></div>
+        <div>Construir um abrigo <strong id="goalBuild"></strong></div>
+      </div>
+      <footer class="dialog-foot" id="saveStatus">Salvamento automático ativo</footer>
+    </dialog>
+    <dialog id="help" aria-labelledby="help-title" class="game-modal">
+      <header class="dialog-head">
+        <h1 id="help-title">Controles</h1>
+        <button class="close" data-action="close" aria-label="Fechar controles">×</button>
+      </header>
+      <dl class="controls">
+        <dt>A / D ou ← →</dt>
+        <dd>Andar</dd>
+        <dt>Shift + movimento</dt>
+        <dd>Correr</dd>
+        <dt>Espaço / W / ↑</dt>
+        <dd>Pular</dd>
+        <dt>Botão esquerdo</dt>
+        <dd>
+          Segurar para atingir o primeiro bloco ou criatura à frente. Mire acima ou abaixo para
+          inclinar o golpe.
+        </dd>
+        <dt>Botão direito</dt>
+        <dd>Construir ou abrir uma bancada próxima</dd>
+        <dt>1–8 / roda</dt>
+        <dd>Selecionar equipamento</dd>
+        <dt>Q / R</dt>
+        <dd>Soltar / consumir item selecionado</dd>
+        <dt>E / I</dt>
+        <dd>Abrir mochila e fabricar</dd>
+        <dt>+ / − / 0</dt>
+        <dd>Ajustar / restaurar zoom</dd>
+        <dt>G</dt>
+        <dd>Abrir ou fechar o mapa do mundo</dd>
+        <dt>T</dt>
+        <dd>Abrir o terminal de comandos</dd>
+        <dt>M / Esc / P</dt>
+        <dd>Menu e pausa</dd>
+      </dl>
+    </dialog>
+    <dialog id="new-world" aria-labelledby="new-title" class="game-modal">
+      <header class="dialog-head">
+        <h1 id="new-title">Novo mundo</h1>
+        <button class="close" data-action="close" aria-label="Cancelar">×</button>
+      </header>
+      <form id="seedForm">
+        <label for="seedInput">Semente do mundo</label>
+        <div class="seed-row">
+          <input id="seedInput" maxlength="40" autocomplete="off" /><button
+            type="button"
+            data-action="random"
+          >
+            Sortear
+          </button>
+        </div>
+        <p>Gerar um mundo substitui a expedição salva neste navegador.</p>
+        <button class="primary" type="submit">Gerar mundo</button>
+      </form>
+    </dialog>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

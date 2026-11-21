@@ -1,0 +1,9 @@
+{
+  "name": "Botas de couro",
+  "kind": "armor",
+  "icon": "leatherBoots",
+  "unique": true,
+  "color": "#75482f",
+  "armor": { "slot": "feet", "bonusLife": 1, "durability": 80 },
+  "states": { "inventory": true, "dropped": true }
+}

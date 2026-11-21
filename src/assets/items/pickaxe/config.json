@@ -1,0 +1,23 @@
+{
+  "name": "Picareta de madeira",
+  "icon": "pickaxe",
+  "initial": 1,
+  "slot": 0,
+  "kind": "tool",
+  "tool": {
+    "role": "mining",
+    "miningMultiplier": 1,
+    "mineTier": 2
+    ,"durability": 96
+  },
+  "hit": {
+    "damage": 2,
+    "reach": 42,
+    "cooldown": 0.34
+  },
+  "states": {
+    "held": true,
+    "inventory": true,
+    "dropped": true
+  }
+}

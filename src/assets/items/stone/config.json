@@ -1,0 +1,12 @@
+{
+  "name": "Pedra",
+  "block": "STONE",
+  "initial": 12,
+  "slot": 2,
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

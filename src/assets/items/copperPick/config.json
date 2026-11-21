@@ -1,0 +1,22 @@
+{
+  "name": "Picareta de cobre",
+  "icon": "copperPick",
+  "unique": true,
+  "kind": "tool",
+  "tool": {
+    "role": "mining",
+    "miningMultiplier": 1.6,
+    "mineTier": 4
+    ,"durability": 220
+  },
+  "hit": {
+    "damage": 3,
+    "reach": 46,
+    "cooldown": 0.3
+  },
+  "states": {
+    "held": true,
+    "inventory": true,
+    "dropped": true
+  }
+}

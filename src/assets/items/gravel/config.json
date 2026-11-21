@@ -1,0 +1,11 @@
+{
+  "name": "Cascalho",
+  "block": "GRAVEL",
+  "initial": 0,
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

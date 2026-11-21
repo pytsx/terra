@@ -1,0 +1,6 @@
+{
+  "name": "Trigo",
+  "kind": "material",
+  "color": "#d9b85f",
+  "states": {"inventory": true, "dropped": true}
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Carne",
+  "kind": "consumable",
+  "color": "#a85d4f",
+  "use": {"effect": "heal", "amount": 2},
+  "states": {"inventory": true, "dropped": true}
+}

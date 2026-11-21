@@ -1,0 +1,10 @@
+{
+  "name": "Cobre",
+  "block": "COPPER",
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

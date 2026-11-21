@@ -1,0 +1,30 @@
+{
+  "id": 19,
+  "name": "Ferro",
+  "color": "#b8b6aa",
+  "solid": true,
+  "hardness": 1.18,
+  "drop": "iron",
+  "mineTier": 4,
+  "texture": {
+    "base": "#666d7c",
+    "grain": {
+      "count": 34,
+      "colors": [
+        "#858c98",
+        "#555d6d",
+        "#737b89"
+      ],
+      "max": 4
+    },
+    "veins": [
+      "#c9c5b7",
+      "#96978f"
+    ]
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  }
+}

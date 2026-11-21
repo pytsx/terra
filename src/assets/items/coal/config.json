@@ -1,0 +1,10 @@
+{
+  "name": "Carvão",
+  "block": "COAL",
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

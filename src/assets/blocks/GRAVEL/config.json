@@ -1,0 +1,22 @@
+{
+  "id": 20,
+  "name": "Cascalho",
+  "color": "#89847b",
+  "solid": true,
+  "hardness": 0.32,
+  "drop": "gravel",
+  "texture": {
+    "base": "#827e76",
+    "grain": {
+      "count": 38,
+      "colors": ["#aaa49a", "#69665f", "#c1b7a6", "#77736c"],
+      "max": 4
+    }
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 1
+}

@@ -1,0 +1,30 @@
+{
+  "id": 14,
+  "name": "Ouro",
+  "color": "#f8d176",
+  "solid": true,
+  "hardness": 1.1,
+  "drop": "gold",
+  "texture": {
+    "base": "#81899c",
+    "grain": {
+      "count": 38,
+      "colors": [
+        "#a1a7b5",
+        "#6d768c",
+        "#8f98a6"
+      ],
+      "max": 4
+    },
+    "veins": [
+      "#e5bc64",
+      "#ffd88a"
+    ]
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 4
+}

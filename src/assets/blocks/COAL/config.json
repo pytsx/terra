@@ -1,0 +1,30 @@
+{
+  "id": 5,
+  "name": "Carvão",
+  "color": "#363945",
+  "solid": true,
+  "hardness": 0.88,
+  "drop": "coal",
+  "texture": {
+    "base": "#81899c",
+    "grain": {
+      "count": 38,
+      "colors": [
+        "#a1a7b5",
+        "#6d768c",
+        "#8f98a6"
+      ],
+      "max": 4
+    },
+    "veins": [
+      "#282e37",
+      "#434a52"
+    ]
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 3
+}

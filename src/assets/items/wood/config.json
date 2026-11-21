@@ -1,0 +1,12 @@
+{
+  "name": "Madeira",
+  "block": "WOOD",
+  "initial": 12,
+  "slot": 3,
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

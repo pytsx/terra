@@ -1,0 +1,18 @@
+{
+  "diet": {"food":"detritus","prey":["earthworm"],"poreWater":true},
+  "id": "sandcrab",
+  "name": "Caranguejo de areia",
+  "width": 16,
+  "height": 9,
+  "speed": 18,
+  "interval": 5,
+  "health": 2,
+  "activeRadius": 2160,
+  "substrate": [
+    "SAND"
+  ],
+  "spawn": {
+    "biomes": ["Dunas"],
+    "weight": 24
+  }
+}

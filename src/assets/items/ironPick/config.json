@@ -1,0 +1,9 @@
+{
+  "name": "Picareta de ferro",
+  "icon": "ironPick",
+  "unique": true,
+  "kind": "tool",
+  "tool": { "role": "mining", "miningMultiplier": 1.9, "mineTier": 5, "durability": 360 },
+  "hit": { "damage": 4, "reach": 47, "cooldown": 0.29 },
+  "states": { "held": true, "inventory": true, "dropped": true }
+}

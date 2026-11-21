@@ -1,0 +1,58 @@
+{
+  "id": 1,
+  "name": "Grama",
+  "color": "#75ba68",
+  "solid": true,
+  "hardness": 0.3,
+  "drop": "dirt",
+  "texture": {
+    "base": "#84603f",
+    "grain": {
+      "count": 32,
+      "colors": [
+        "#765339",
+        "#9e784b",
+        "#aa8051"
+      ],
+      "max": 4
+    },
+    "detail": [
+      {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 5,
+        "color": "#4f9961"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3,
+        "color": "#8aca6c"
+      },
+      {
+        "x": 3,
+        "y": 3,
+        "w": 2,
+        "h": 4,
+        "color": "#69af60"
+      },
+      {
+        "x": 16,
+        "y": 3,
+        "w": 2,
+        "h": 3,
+        "color": "#69af60"
+      }
+    ]
+  },
+  "foliage": "#65a769",
+  "biome": "Floresta",
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 1
+}

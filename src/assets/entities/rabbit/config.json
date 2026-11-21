@@ -1,0 +1,19 @@
+{
+  "diet": {"food":"grass"},
+  "id": "rabbit",
+  "name": "Coelho",
+  "width": 17,
+  "height": 17,
+  "speed": 33,
+  "interval": 3.6,
+  "health": 2,
+  "activeRadius": 2160,
+  "substrate": [
+    "GRASS",
+    "DIRT"
+  ],
+  "spawn": {
+    "biomes": ["Pradaria"],
+    "weight": 22
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Capacete de couro",
+  "kind": "armor",
+  "icon": "leatherHelmet",
+  "unique": true,
+  "color": "#a96e45",
+  "armor": { "slot": "head", "bonusLife": 1, "durability": 70 },
+  "states": { "inventory": true, "dropped": true }
+}

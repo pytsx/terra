@@ -1,0 +1,26 @@
+{
+  "name": "Espada",
+  "kind": "tool",
+  "icon": "sword",
+  "initial": 0,
+  "unique": true,
+  "tool": {
+    "role": "combat",
+    "durability": 180,
+    "hit": {
+      "damage": 5,
+      "reach": 52,
+      "cooldown": 0.25
+    }
+  },
+  "hit": {
+    "damage": 5,
+    "reach": 52,
+    "cooldown": 0.25
+  },
+  "states": {
+    "held": true,
+    "inventory": true,
+    "dropped": true
+  }
+}

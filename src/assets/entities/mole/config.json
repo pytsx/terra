@@ -1,0 +1,19 @@
+{
+  "diet": {"food":"prey","prey":["earthworm"],"poreWater":true},
+  "id": "mole",
+  "name": "Toupeira",
+  "width": 19,
+  "height": 12,
+  "speed": 15,
+  "interval": 1.4,
+  "health": 2,
+  "activeRadius": 2160,
+  "substrate": [
+    "GRASS",
+    "DIRT"
+  ],
+  "spawn": {
+    "biomes": ["Pradaria"],
+    "weight": 18
+  }
+}

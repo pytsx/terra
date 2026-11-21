@@ -1,0 +1,7 @@
+{
+  "name": "Carne crua",
+  "kind": "consumable",
+  "color": "#c27867",
+  "use": {"effect": "heal", "amount": 1},
+  "states": {"inventory": true, "dropped": true}
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Couro",
+  "kind": "material",
+  "color": "#9a643f",
+  "states": {"inventory": true, "dropped": true}
+}

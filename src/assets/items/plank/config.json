@@ -1,0 +1,12 @@
+{
+  "name": "Tábuas",
+  "block": "PLANK",
+  "initial": 14,
+  "slot": 4,
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

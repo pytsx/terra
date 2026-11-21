@@ -1,0 +1,15 @@
+{
+  "name": "Lampião de cristal",
+  "icon": "lantern",
+  "unique": true,
+  "kind": "tool",
+  "tool": {
+    "role": "light",
+    "radius": 220
+  },
+  "states": {
+    "held": true,
+    "inventory": true,
+    "dropped": true
+  }
+}

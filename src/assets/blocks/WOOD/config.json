@@ -1,0 +1,39 @@
+{
+  "id": 8,
+  "name": "Madeira",
+  "color": "#9e603a",
+  "solid": true,
+  "hardness": 0.48,
+  "drop": "wood",
+  "texture": {
+    "detail": [
+      {
+        "x": 2,
+        "y": 0,
+        "w": 4,
+        "h": 24,
+        "color": "#b77a4b"
+      },
+      {
+        "x": 18,
+        "y": 0,
+        "w": 3,
+        "h": 24,
+        "color": "#74482f"
+      },
+      {
+        "x": 9,
+        "y": 4,
+        "w": 2,
+        "h": 11,
+        "color": "#c28a55"
+      }
+    ]
+  },
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 1
+}

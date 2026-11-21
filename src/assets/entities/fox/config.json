@@ -1,0 +1,19 @@
+{
+  "diet": {"food":"prey","prey":["rabbit"]},
+  "id": "fox",
+  "name": "Raposa",
+  "width": 24,
+  "height": 17,
+  "speed": 48,
+  "interval": 0.65,
+  "health": 5,
+  "activeRadius": 2160,
+  "substrate": [
+    "DIRT",
+    "GRASS"
+  ],
+  "spawn": {
+    "biomes": ["Floresta temperada","Bosque de coníferas"],
+    "weight": 9
+  }
+}

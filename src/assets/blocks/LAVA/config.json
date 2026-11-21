@@ -1,0 +1,44 @@
+{
+  "id": 18,
+  "name": "Lava",
+  "color": "#e85f28",
+  "solid": false,
+  "hardness": null,
+  "drop": null,
+  "texture": {
+    "base": "#d94b22",
+    "detail": [
+      {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 3,
+        "color": "#ffb52e"
+      },
+      {
+        "x": 7,
+        "y": 14,
+        "w": 12,
+        "h": 2,
+        "color": "#f47b24"
+      }
+    ]
+  },
+  "light": {
+    "radius": 88,
+    "power": 0.7,
+    "glow": "rgba(255,112,35,.35)"
+  },
+  "states": {
+    "placed": true,
+    "inventory": false,
+    "dropped": false
+  },
+  "fluid": {
+    "kind": "lava",
+    "viscosity": 0.28,
+    "spread": 0.32,
+    "pressure": 0.55
+  },
+  "mineTier": 0
+}

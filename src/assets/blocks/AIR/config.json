@@ -1,0 +1,14 @@
+{
+  "id": 0,
+  "name": "Ar",
+  "color": "#000000",
+  "solid": false,
+  "hardness": null,
+  "drop": null,
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 0
+}

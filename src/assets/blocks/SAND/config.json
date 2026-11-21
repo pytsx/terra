@@ -1,0 +1,28 @@
+{
+  "id": 10,
+  "name": "Areia",
+  "color": "#e4c38b",
+  "solid": true,
+  "gravity": true,
+  "hardness": 0.23,
+  "drop": "sand",
+  "texture": {
+    "grain": {
+      "count": 23,
+      "colors": [
+        "#cfac74",
+        "#f4dba3",
+        "#bc9c70"
+      ],
+      "max": 3
+    }
+  },
+  "foliage": "#ccab72",
+  "biome": "Deserto",
+  "states": {
+    "placed": true,
+    "inventory": true,
+    "dropped": true
+  },
+  "mineTier": 1
+}

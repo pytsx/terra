@@ -1,0 +1,12 @@
+{
+  "name": "Areia",
+  "block": "SAND",
+  "initial": 0,
+  "slot": 6,
+  "kind": "item",
+  "states": {
+    "held": false,
+    "inventory": true,
+    "dropped": true
+  }
+}

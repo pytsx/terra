@@ -1,0 +1,19 @@
+{
+  "diet": {"food":"wood","poreWater":true},
+  "id": "termite",
+  "name": "Cupim",
+  "width": 12,
+  "height": 7,
+  "speed": 19,
+  "interval": 2.8,
+  "health": 2,
+  "activeRadius": 2160,
+  "substrate": [
+    "DIRT",
+    "GRASS"
+  ],
+  "spawn": {
+    "biomes": ["Floresta temperada","Bosque de coníferas"],
+    "weight": 10
+  }
+}

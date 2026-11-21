@@ -1,0 +1,9 @@
+{
+  "name": "Calças de couro",
+  "kind": "armor",
+  "icon": "leatherLeggings",
+  "unique": true,
+  "color": "#875535",
+  "armor": { "slot": "legs", "bonusLife": 2, "durability": 95 },
+  "states": { "inventory": true, "dropped": true }
+}
