@@ -8,17 +8,25 @@ import { OreGenerator } from './OreGenerator';
 import { SpawnGenerator } from './SpawnGenerator';
 import { SurfaceFeatureGenerator } from './SurfaceFeatureGenerator';
 import { TerrainDensityGenerator } from './TerrainDensityGenerator';
+import { FeatureRegistry } from './features/FeatureRegistry';
+import { oreDepositFeatures } from './features/oreDeposits';
+import { treeFeatures } from './features/trees';
+import { terrainMaterialFeature } from './features/terrainMaterials';
 import { GenerationPipeline, type ClimateSample, type GenerationContext } from './types';
 
 export const climateGenerator = new ClimateGenerator();
+export const generationFeatures = new FeatureRegistry();
+export const resolvedOreDeposits = generationFeatures.ore(oreDepositFeatures);
+export const resolvedTrees = generationFeatures.trees(treeFeatures);
+export const resolvedTerrainMaterials = generationFeatures.terrain(terrainMaterialFeature);
 export const terrainPipeline = new GenerationPipeline([
-  new TerrainDensityGenerator(),
+  new TerrainDensityGenerator(resolvedTerrainMaterials),
   new GravelVeinGenerator(),
   new CaveGenerator(),
   new AquiferGenerator(),
-  new OreGenerator(),
+  new OreGenerator(resolvedOreDeposits),
   new FloatingIslandGenerator(),
-  new SurfaceFeatureGenerator(),
+  new SurfaceFeatureGenerator(resolvedTrees),
   new SpawnGenerator(),
 ]);
 export const modernPipeline = new GenerationPipeline([climateGenerator, ...terrainPipeline.stages]);

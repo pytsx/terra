@@ -1,18 +1,17 @@
-import { B } from '../catalog';
 import { clamp, noise1, rand01, smooth } from '../../shared/math';
 import { ClimateGenerator } from './ClimateGenerator';
-import type { ClimateSample, GenerationContext } from './types';
+import type { ClimateSample } from './types';
 
 export type Biome = 'Pradaria' | 'Floresta temperada' | 'Bosque de coníferas' | 'Serra rochosa' | 'Dunas';
 
-/** Sample a halo so a tree rooted in the next chunk can shade this one. */
+/** Samples relief, climate and biomes, without placing world features. */
 export class Landscape {
   private readonly margin = 4;
   private readonly elevations: Int16Array;
   private readonly biomes: Biome[] = [];
   readonly climate: ClimateSample[];
 
-  constructor(private seed: number, private origin: number, width: number) {
+  constructor(seed: number, origin: number, width: number) {
     this.elevations = new Int16Array(width + this.margin * 2);
     const samples: ClimateSample[] = [];
     new ClimateGenerator().generate({
@@ -37,25 +36,4 @@ export class Landscape {
 
   biome(x: number) { return this.biomes[x + this.margin]; }
   height(x: number) { return this.elevations[x + this.margin]; }
-
-  plant(context: GenerationContext) {
-    for (let x = -this.margin; x < context.width + this.margin; x++) {
-      const gx = this.origin + x, cell = Math.floor(gx / 6);
-      if (gx !== cell * 6 + Math.floor(rand01(cell, 3, this.seed) * 5)) continue;
-      if (Math.abs(x - context.spawnX) < 8) continue;
-      const biome = this.biome(x), pine = biome === 'Bosque de coníferas';
-      const chance = pine ? 0.84 : biome === 'Floresta temperada' ? 0.94 : biome === 'Pradaria' ? 0.09 : 0;
-      if (rand01(cell, 4, this.seed) >= chance) continue;
-      const y = this.height(x), height = (pine ? 8 : 5) + Math.floor(rand01(cell, 5, this.seed) * 4);
-      if (y < context.startY || y - height - 2 >= context.endY) continue;
-      for (let dy = 1; dy <= height; dy++) context.set(x, y - dy, B.WOOD);
-      for (let dy = -2; dy <= (pine ? 5 : 2); dy++) {
-        const radius = pine ? Math.floor((dy + 3) / 2) : 4 - Math.abs(dy);
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (context.get(x + dx, y - height + dy) === B.AIR)
-            context.set(x + dx, y - height + dy, B.LEAF);
-        }
-      }
-    }
-  }
 }

@@ -93,6 +93,8 @@ Mundos novos possuem 256 blocos de altura. O relevo e o clima são calculados po
 
 Os geradores especializados ficam em `src/business/worldgen`. Cada estágio recebe o mesmo contexto, incluindo a origem global do chunk, e modifica somente a parte do terreno sob sua responsabilidade. Os campos climáticos usam frequências mais baixas para permitir biomas e formações maiores que um chunk sem criar emendas visíveis.
 
+As definições declarativas em `worldgen/features` descrevem materiais, profundidade, raridade, biomas e blocos substituíveis. O `FeatureRegistry` valida essas definições e resolve nomes pelo catálogo; as estratégias recebem somente contratos resolvidos e cuidam da distribuição espacial. Assim, novos depósitos e estruturas vegetais reutilizam algoritmos existentes sem acoplar blocos concretos ao gerador. `Landscape` permanece restrito a relevo, clima e classificação de biomas.
+
 | Estágio | Responsabilidade |
 | --- | --- |
 | Multi-noise, fBm e splines | Produzir continentalidade, erosão, estranheza, picos e vales, temperatura e umidade, transformando esses campos em relevo controlado. |
