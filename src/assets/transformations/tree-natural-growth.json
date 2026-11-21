@@ -2,6 +2,10 @@
   "id": "tree.natural-growth",
   "priority": 15,
   "source": "SAPLING",
+  "eligibility": {
+    "natural": true,
+    "playerPlaced": true
+  },
   "conditions": { "all": [
     { "property": "water.saturation", "operator": ">=", "value": 0.6 },
     { "property": "environment.exposedToSky", "operator": "==", "value": true }

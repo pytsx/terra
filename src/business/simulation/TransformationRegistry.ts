@@ -14,7 +14,7 @@ export interface TransformationRule {
   readonly conditions: TransformationAsset['conditions'];
   readonly duration: { readonly seconds: number; readonly mode: 'continuous' };
   readonly probability: number;
-  readonly retry: 'on-condition-reset';
+  readonly retry: 'on-condition-reset' | 'every-interval';
   readonly eligibility: { readonly natural: boolean; readonly playerPlaced: boolean };
   readonly action: EvolutionAction;
 }
@@ -69,7 +69,7 @@ export class TransformationRegistry {
         action = Object.freeze({ ...declaredAction });
       }
       if (source === undefined || asset.duration.mode !== 'continuous' || !(seconds > 0) ||
-        !(asset.probability >= 0 && asset.probability <= 1) || asset.retry !== 'on-condition-reset' ||
+        !(asset.probability >= 0 && asset.probability <= 1) || (asset.retry !== 'on-condition-reset' && asset.retry !== 'every-interval') ||
         typeof eligibility.natural !== 'boolean' || typeof eligibility.playerPlaced !== 'boolean')
         throw new Error(`Transformação ${asset.id}: definição inválida`);
       return Object.freeze({ id: asset.id, source, conditions: asset.conditions, probability: asset.probability,

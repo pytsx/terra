@@ -23,7 +23,7 @@ interface EvolutionRuleBase {
   conditions: TransformationCondition;
   duration: { days?: number; seconds?: number; mode: 'continuous' };
   probability: number;
-  retry: 'on-condition-reset';
+  retry: 'on-condition-reset' | 'every-interval';
 }
 export interface LegacyTransformationAsset extends EvolutionRuleBase {
   from: string;

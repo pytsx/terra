@@ -47,6 +47,7 @@ export class TransformationEvaluator {
     const conditionsSatisfied = this.condition(rule.conditions, context);
     const elapsed = conditionsSatisfied ? Math.min(rule.duration.seconds, progress.elapsed + Math.max(0, dt)) : 0;
     const durationReached = conditionsSatisfied && elapsed >= rule.duration.seconds;
-    return { conditionsSatisfied, elapsed, durationReached, canAttempt: durationReached && !progress.attempted };
+    const canAttempt = rule.retry === 'every-interval' ? durationReached : durationReached && !progress.attempted;
+    return { conditionsSatisfied, elapsed, durationReached, canAttempt };
   }
 }

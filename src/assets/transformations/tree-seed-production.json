@@ -1,0 +1,13 @@
+{
+  "id": "tree.seed-production",
+  "priority": 5,
+  "source": "WOOD",
+  "eligibility": { "natural": true, "playerPlaced": false },
+  "conditions": { "all": [
+    { "property": "environment.exposedToSky", "operator": "==", "value": true }
+  ] },
+  "duration": { "days": 7, "mode": "continuous" },
+  "probability": 0.05,
+  "retry": "every-interval",
+  "action": { "type": "spawnItem", "item": "sapling", "amount": 1 }
+}
