@@ -260,15 +260,16 @@ test('remoção do obstáculo permite nova avaliação da muda', () => {
 
 // ─── Tree seed production (every-interval) ────────────────────────────────────
 
-test('madeira natural exposta ao céu pode produzir mudas via spawnItem', () => {
+test('árvore natural com tronco e copa produz mudas pela base', () => {
   const world = new World('SEED-PROD');
   const items: string[] = [];
   world.onItemProduced(({ item }) => items.push(item));
 
-  // Place a natural WOOD block exposed to sky
   const wx = 10;
   for (let row = 0; row < y; row++) world.set(wx, row, B.AIR, false);
-  world.set(wx, y, B.WOOD, false);  // generation (not player-placed)
+  world.set(wx, y + 1, B.DIRT, false);
+  for (const cell of featureGenerator.plan('OAK_TREE', wx, y, world.h, 0)!.placements)
+    world.set(cell.x, cell.y, cell.block, false);
 
   const region = regionAt(wx);
   const partition = blockPartitionAt(wx, y);

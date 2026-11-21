@@ -8,6 +8,7 @@ export type EvolutionAction =
   | { readonly type: 'placeFeature'; readonly feature: string; readonly replaceSource: boolean }
   | { readonly type: 'spawnItem'; readonly item: string; readonly amount: number };
 export interface TransformationRule {
+  readonly rootWaterCost: number;
   readonly id: string;
   readonly priority: number;
   readonly source: number;
@@ -19,7 +20,7 @@ export interface TransformationRule {
   readonly action: EvolutionAction;
 }
 
-const properties = new Set(['water.volume', 'water.capacity', 'water.saturation', 'environment.exposedToSky', 'soil.moisture']);
+const properties = new Set(['water.volume', 'water.capacity', 'water.saturation', 'environment.exposedToSky', 'soil.moisture', 'feature.matureTree']);
 const operators = new Set(['==', '!=', '>', '>=', '<', '<=']);
 
 function validateCondition(condition: TransformationCondition, id: string): void {
@@ -72,7 +73,9 @@ export class TransformationRegistry {
         !(asset.probability >= 0 && asset.probability <= 1) || (asset.retry !== 'on-condition-reset' && asset.retry !== 'every-interval') ||
         typeof eligibility.natural !== 'boolean' || typeof eligibility.playerPlaced !== 'boolean')
         throw new Error(`Transformação ${asset.id}: definição inválida`);
-      return Object.freeze({ id: asset.id, source, conditions: asset.conditions, probability: asset.probability,
+      const rootWaterCost = asset.rootWaterCost ?? 0;
+      if (!Number.isSafeInteger(rootWaterCost) || rootWaterCost < 0) throw new Error('Consumo hídrico inválido');
+      return Object.freeze({ id: asset.id, source, rootWaterCost, conditions: asset.conditions, probability: asset.probability,
         retry: asset.retry, action, priority: asset.priority ?? 0,
         eligibility: Object.freeze(eligibility),
         duration: Object.freeze({ seconds, mode: 'continuous' as const }) });

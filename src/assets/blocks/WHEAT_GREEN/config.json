@@ -1,0 +1,9 @@
+{
+  "id": 25,
+  "name": "Trigo verde",
+  "color": "#6eaa46",
+  "solid": false,
+  "hardness": 0.3,
+  "drop": "wheatSeed",
+  "support": "FARMLAND"
+}

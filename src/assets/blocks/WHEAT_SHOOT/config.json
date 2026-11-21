@@ -1,0 +1,9 @@
+{
+  "id": 23,
+  "name": "Brotos de trigo",
+  "color": "#89c56a",
+  "solid": false,
+  "hardness": 0.3,
+  "drop": "wheatSeed",
+  "support": "FARMLAND"
+}

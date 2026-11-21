@@ -1,0 +1,36 @@
+{
+  "id": "soil.recover",
+  "source": "FALLOW",
+  "eligibility": {
+    "natural": true,
+    "playerPlaced": true
+  },
+  "conditions": {
+    "all": [
+      {
+        "property": "environment.exposedToSky",
+        "operator": "==",
+        "value": true
+      },
+      {
+        "property": "water.saturation",
+        "operator": ">=",
+        "value": 0.2
+      }
+    ]
+  },
+  "duration": {
+    "seconds": 90,
+    "mode": "continuous"
+  },
+  "probability": 1,
+  "retry": "on-condition-reset",
+  "rootWaterCost": 0,
+  "action": {
+    "type": "transformBlock",
+    "to": "FARMLAND",
+    "preserve": [
+      "waterVolume"
+    ]
+  }
+}

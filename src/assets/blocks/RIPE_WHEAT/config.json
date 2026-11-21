@@ -1,0 +1,14 @@
+{
+  "id": 24,
+  "name": "Trigo maduro",
+  "color": "#e4bc57",
+  "solid": false,
+  "hardness": 0.3,
+  "drop": "wheat",
+  "support": "FARMLAND",
+  "bonusDrop": {
+    "item": "wheatSeed",
+    "amount": 2
+  },
+  "spentSoil": "FALLOW"
+}

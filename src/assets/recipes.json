@@ -125,5 +125,13 @@
   {
     "pattern": [["iron", null, "iron"], [null, "iron", null]],
     "output": { "item": "bucket", "amount": 1 }
+  },
+  {
+    "pattern": [["stone", "stone"], [null, "wood"]],
+    "output": { "item": "hoe", "amount": 1 }
+  },
+  {
+    "pattern": [["plank", "iron", "plank"]],
+    "output": { "item": "gate", "amount": 1 }
   }
 ]

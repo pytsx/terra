@@ -1,0 +1,36 @@
+{
+  "id": "wheat.wilt",
+  "source": "WHEAT_GREEN",
+  "eligibility": {
+    "natural": true,
+    "playerPlaced": true
+  },
+  "conditions": {
+    "all": [
+      {
+        "property": "environment.exposedToSky",
+        "operator": "==",
+        "value": true
+      },
+      {
+        "property": "soil.moisture",
+        "operator": "<=",
+        "value": 0.08
+      }
+    ]
+  },
+  "duration": {
+    "seconds": 12,
+    "mode": "continuous"
+  },
+  "probability": 1,
+  "retry": "on-condition-reset",
+  "rootWaterCost": 0,
+  "action": {
+    "type": "transformBlock",
+    "to": "WILTED",
+    "preserve": [
+      "waterVolume"
+    ]
+  }
+}

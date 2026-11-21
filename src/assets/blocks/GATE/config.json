@@ -1,0 +1,11 @@
+{
+  "id": 28,
+  "name": "Comporta fechada",
+  "color": "#675034",
+  "solid": true,
+  "hardness": 1,
+  "drop": "gate",
+  "toggle": "GATE_OPEN",
+  "waterCapacity": 0,
+  "permeability": 0
+}

@@ -1,5 +1,6 @@
 {
   "id": 1,
+  "bonusDrop": { "item": "wheatSeed", "amount": 1 },
   "name": "Grama",
   "color": "#75ba68",
   "solid": true,

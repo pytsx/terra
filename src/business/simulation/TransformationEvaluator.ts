@@ -2,6 +2,7 @@ import type { TransformationCondition } from '../../assets';
 import type { TransformationRule } from './TransformationRegistry';
 
 export interface TransformationEnvironment {
+  readonly matureTree?: () => boolean;
   readonly soilMoisture?: number;
   readonly water: { readonly volume: number; readonly capacity: number; readonly saturation: number };
   readonly environment: { readonly exposedToSky: boolean };
@@ -36,7 +37,8 @@ export class TransformationEvaluator {
     if ('all' in condition) return condition.all.every(child => this.condition(child, context));
     if ('any' in condition) return condition.any.some(child => this.condition(child, context));
     if ('not' in condition) return !this.condition(condition.not, context);
-    const value = condition.property === 'soil.moisture' ? context.soilMoisture ?? 0 :
+    const value = condition.property === 'feature.matureTree' ? context.matureTree?.() ?? false :
+      condition.property === 'soil.moisture' ? context.soilMoisture ?? 0 :
       condition.property === 'water.volume' ? context.water.volume :
       condition.property === 'water.capacity' ? context.water.capacity :
       condition.property === 'water.saturation' ? context.water.saturation :

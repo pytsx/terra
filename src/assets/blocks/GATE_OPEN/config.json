@@ -1,0 +1,10 @@
+{
+  "id": 29,
+  "name": "Comporta aberta",
+  "color": "#94704f",
+  "solid": false,
+  "hardness": 1,
+  "drop": "gate",
+  "toggle": "GATE",
+  "openChannel": true
+}

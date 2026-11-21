@@ -1,0 +1,9 @@
+{
+  "id": 22,
+  "name": "Solo fértil",
+  "color": "#745334",
+  "solid": true,
+  "hardness": 0.3,
+  "drop": "dirt",
+  "fertile": true
+}

@@ -153,6 +153,13 @@ export class World {
     return true;
   }
 
+  isMatureTreeBase(x: number, y: number) {
+    const soil = this.get(x, y + 1);
+    if (soil !== B.DIRT && soil !== B.GRASS) return false;
+    let row = y;
+    while (row >= 0 && this.get(x, row) === B.WOOD && this.canTransformNaturally(x, row)) row--;
+    return y - row >= 3 && this.get(x, row) === B.LEAF && this.canTransformNaturally(x, row);
+  }
   exposedToSky(x: number, y: number) {
     if (!this.inside(x, y)) return false;
     for (let row = y - 1; row >= 0; row--) {

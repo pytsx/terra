@@ -364,9 +364,14 @@ export class Expedition {
       }
       return true;
     }
-    if (!held && hit?.kind === 'block' && (hit.id === B.DIRT || hit.id === B.GRASS) &&
+    if (hit?.kind === 'block' && BLOCKS[hit.id].toggle) {
+      this.terrain.set(hit.tx, hit.ty, B[BLOCKS[hit.id].toggle!]);
+      return true;
+    }
+    if (held && ITEMS[held].tool?.role === 'till' && hit?.kind === 'block' && (hit.id === B.DIRT || hit.id === B.GRASS) &&
       this.terrain.get(hit.tx, hit.ty - 1) === B.AIR) {
       this.terrain.set(hit.tx, hit.ty, B.FARMLAND);
+      this.wearHeldTool();
       this.events.push({ type: 'message', text: 'Solo preparado para plantar trigo.' });
       return true;
     }
@@ -438,7 +443,7 @@ export class Expedition {
     const block = this.world.get(tx, ty);
     const intersects = x < p.x + p.w && x + TILE > p.x && y < p.y + p.h && y + TILE > p.y;
     const canPlace =
-      (tile !== B.WHEAT_SHOOT || this.terrain.get(tx, ty + 1) === B.FARMLAND) &&
+      (tile === undefined || !BLOCKS[tile].support || this.terrain.get(tx, ty + 1) === B[BLOCKS[tile].support!]) &&
       reachable &&
       (block === B.AIR || block === B.WATER) &&
       tile !== undefined &&
@@ -584,8 +589,9 @@ export class Expedition {
     const after = this.terrain.mine(tx, ty, dt * multiplier);
     const position = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE };
     if (after === 1) {
-      if (id === B.GRASS || id === B.RIPE_WHEAT)
-        this.commands.run(this.actions.spawnDrop({ item: 'wheatSeed', amount: id === B.RIPE_WHEAT ? 2 : 1, ...position }, 0, -32));
+      if (block.bonusDrop) this.commands.run(this.actions.spawnDrop({ ...block.bonusDrop, ...position }, 0, -32));
+      if (block.spentSoil && BLOCKS[this.terrain.get(tx, ty + 1)].fertile)
+        this.terrain.set(tx, ty + 1, B[block.spentSoil]);
       if (block.drop) this.commands.run(this.actions.spawnDrop({ item: block.drop, amount: 1, ...position }, 0, -32));
       this.wearHeldTool();
       this.impact(position.x, position.y, id);

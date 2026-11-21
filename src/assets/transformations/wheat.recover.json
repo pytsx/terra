@@ -1,0 +1,36 @@
+{
+  "id": "wheat.recover",
+  "source": "WILTED",
+  "eligibility": {
+    "natural": true,
+    "playerPlaced": true
+  },
+  "conditions": {
+    "all": [
+      {
+        "property": "environment.exposedToSky",
+        "operator": "==",
+        "value": true
+      },
+      {
+        "property": "soil.moisture",
+        "operator": ">=",
+        "value": 0.2
+      }
+    ]
+  },
+  "duration": {
+    "seconds": 8,
+    "mode": "continuous"
+  },
+  "probability": 1,
+  "retry": "on-condition-reset",
+  "rootWaterCost": 20,
+  "action": {
+    "type": "transformBlock",
+    "to": "WHEAT_GREEN",
+    "preserve": [
+      "waterVolume"
+    ]
+  }
+}

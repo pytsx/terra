@@ -131,14 +131,42 @@ import item_ironPickScript from './items/ironPick';
 import item_saplingConfig from './items/sapling/config.json';
 import item_saplingScript from './items/sapling';
 
+import FARMLANDConfig from './blocks/FARMLAND/config.json';
+import FARMLANDScript from './blocks/FARMLAND';
+import WHEAT_SHOOTConfig from './blocks/WHEAT_SHOOT/config.json';
+import WHEAT_SHOOTScript from './blocks/WHEAT_SHOOT';
+import RIPE_WHEATConfig from './blocks/RIPE_WHEAT/config.json';
+import RIPE_WHEATScript from './blocks/RIPE_WHEAT';
+import WHEAT_GREENConfig from './blocks/WHEAT_GREEN/config.json';
+import WHEAT_GREENScript from './blocks/WHEAT_GREEN';
+import WILTEDConfig from './blocks/WILTED/config.json';
+import WILTEDScript from './blocks/WILTED';
+import FALLOWConfig from './blocks/FALLOW/config.json';
+import FALLOWScript from './blocks/FALLOW';
+import GATEConfig from './blocks/GATE/config.json';
+import GATEScript from './blocks/GATE';
+import GATE_OPENConfig from './blocks/GATE_OPEN/config.json';
+import GATE_OPENScript from './blocks/GATE_OPEN';
+import wheatSeedConfig from './items/wheatSeed/config.json';
+import wheatSeedScript from './items/wheatSeed';
+import bucketConfig from './items/bucket/config.json';
+import bucketScript from './items/bucket';
+import waterBucketConfig from './items/waterBucket/config.json';
+import waterBucketScript from './items/waterBucket';
+import hoeConfig from './items/hoe/config.json';
+import hoeScript from './items/hoe';
+import gateConfig from './items/gate/config.json';
+import gateScript from './items/gate';
+
 const blocks = {
-  FARMLAND: { config: { ...block_dirtConfig, id: 22, name: 'Solo preparado', color: '#63462c' }, script: block_dirtScript },
-  WHEAT_SHOOT: { config: { ...block_saplingConfig, id: 23, name: 'Trigo jovem', drop: 'wheatSeed' }, script: block_saplingScript },
-  RIPE_WHEAT: { config: { ...block_saplingConfig, id: 24, name: 'Trigo maduro', drop: 'wheat' }, script: {
-    ...block_saplingScript, placed: { render(c: CanvasRenderingContext2D) {
-      for (const x of [5, 11, 17]) { c.fillStyle = '#ad863c'; c.fillRect(x, 6, 2, 18);
-        c.fillStyle = '#e5be61'; c.fillRect(x - 2, 3, 5, 9); }
-    } } } },
+  FARMLAND: { config: FARMLANDConfig, script: FARMLANDScript },
+  WHEAT_SHOOT: { config: WHEAT_SHOOTConfig, script: WHEAT_SHOOTScript },
+  RIPE_WHEAT: { config: RIPE_WHEATConfig, script: RIPE_WHEATScript },
+  WHEAT_GREEN: { config: WHEAT_GREENConfig, script: WHEAT_GREENScript },
+  WILTED: { config: WILTEDConfig, script: WILTEDScript },
+  FALLOW: { config: FALLOWConfig, script: FALLOWScript },
+  GATE: { config: GATEConfig, script: GATEScript },
+  GATE_OPEN: { config: GATE_OPENConfig, script: GATE_OPENScript },
   "AIR": { config: block_airConfig, script: block_airScript },
   "BEDROCK": { config: block_bedrockConfig, script: block_bedrockScript },
   "BRICK": { config: block_brickConfig, script: block_brickScript },
@@ -164,14 +192,16 @@ const blocks = {
 } as const;
 
 for (const [key, asset] of Object.entries(blocks)) {
-  Object.assign(asset, { config: { ...asset.config, ...permeabilityFor(key, asset.config) } });
+  Object.assign(asset, { config: { ...permeabilityFor(key, asset.config), ...asset.config } });
 }
 export const modularBlocks = immutable(blocks);
 
 export const modularItems = immutable({
-  wheatSeed: { config: { ...item_saplingConfig, name: 'Sementes de trigo', block: 'WHEAT_SHOOT' }, script: item_saplingScript },
-  bucket: { config: { name: 'Balde vazio', kind: 'item', unique: false, color: '#9aabba' }, script: item_saplingScript },
-  waterBucket: { config: { name: 'Balde com água', kind: 'item', unique: false, color: '#488cd6' }, script: item_saplingScript },
+  wheatSeed: { config: wheatSeedConfig, script: wheatSeedScript },
+  bucket: { config: bucketConfig, script: bucketScript },
+  waterBucket: { config: waterBucketConfig, script: waterBucketScript },
+  hoe: { config: hoeConfig, script: hoeScript },
+  gate: { config: gateConfig, script: gateScript },
   "brick": { config: item_brickConfig, script: item_brickScript },
   "coal": { config: item_coalConfig, script: item_coalScript },
   "copper": { config: item_copperConfig, script: item_copperScript },

@@ -16,7 +16,7 @@ const MOVING_WATER_ABSORPTION = 0.2;
 const RAIN_ABSORPTION = 0.35;
 const GRAVEL_PULL_RATE = 0.9;
 const MAX_AQUIFER_LINK_DEPTH = 160;
-const liquid = (id: number) => id === B.AIR || id === B.WATER || id === B.LAVA || id === B.TORCH;
+const liquid = (id: number) => id === B.AIR || id === B.WATER || id === B.LAVA || id === B.TORCH || !!BLOCKS[id]?.openChannel;
 const capacity = (id: number) => liquid(id) ? full : Math.round((BLOCKS[id].waterCapacity ?? 0) * full);
 export interface WaterState { volume: number; capacity: number; saturation: number }
 

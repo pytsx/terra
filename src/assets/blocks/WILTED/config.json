@@ -1,0 +1,9 @@
+{
+  "id": 26,
+  "name": "Trigo murcho",
+  "color": "#997547",
+  "solid": false,
+  "hardness": 0.3,
+  "drop": "wheatSeed",
+  "support": "FARMLAND"
+}

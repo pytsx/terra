@@ -29,6 +29,12 @@ export interface FluidConfig {
   pressure: number;
 }
 export interface Block {
+  fertile?: boolean;
+  support?: string;
+  toggle?: string;
+  openChannel?: boolean;
+  bonusDrop?: { item: string; amount: number };
+  spentSoil?: string;
   permeability?: number;
   waterCapacity?: number;
   fluid?: FluidConfig;

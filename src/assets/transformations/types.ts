@@ -1,4 +1,5 @@
 export type TransformationProperty =
+  | 'feature.matureTree'
   | 'soil.moisture'
   | 'water.volume'
   | 'water.capacity'
@@ -15,6 +16,7 @@ export type TransformationCondition = PropertyCondition |
   { any: TransformationCondition[] } |
   { not: TransformationCondition };
 interface EvolutionRuleBase {
+  rootWaterCost?: number;
   id: string;
   priority?: number;
   eligibility?: {

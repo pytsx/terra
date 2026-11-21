@@ -1,7 +1,7 @@
 import { hashText, mixHash } from '../../shared/math';
 import type { World } from '../world/World';
 import { featureGenerator } from '../worldgen/FeatureGenerator';
-import { B, CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
+import { BLOCKS, CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
 import { blockPartitionAt } from './BlockPartitionScheduler';
 import type { SimulationRegion } from './SimulationRegion';
 import { TransformationEvaluator } from './TransformationEvaluator';
@@ -100,7 +100,8 @@ export class WorldEvolutionSystem {
       }
       const previous = this.state.get(x, y, rule.id);
       const evaluation = this.evaluator.evaluate(rule, {
-        soilMoisture: block === B.WHEAT_SHOOT && world.peek(x, y + 1) === B.FARMLAND
+        matureTree: () => world.isMatureTreeBase(x, y),
+        soilMoisture: BLOCKS[block].support && BLOCKS[world.get(x, y + 1)]?.fertile
           ? world.waterStateAt(x, y + 1).saturation : 0,
         water: world.waterStateAt(x, y, block),
         environment: { exposedToSky: world.exposedToSky(x, y) },
@@ -111,6 +112,7 @@ export class WorldEvolutionSystem {
       }
       const next = { elapsed: evaluation.elapsed, attempted: previous.attempted, attempts: previous.attempts };
       if (evaluation.canAttempt) {
+        if (rule.rootWaterCost && world.waterStateAt(x, y + 1).volume * 1000 < rule.rootWaterCost) continue;
         const plan = rule.action.type === 'placeFeature'
           ? featureGenerator.plan(rule.action.feature, x, y, world.h, previous.attempts) : undefined;
         if (rule.action.type === 'placeFeature' &&
@@ -126,6 +128,7 @@ export class WorldEvolutionSystem {
             ? world.placeNaturalFeature(x, y, rule.source, plan, rule.action.replaceSource, rule.eligibility)
             : world.produceItem(rule.action.item, rule.action.amount, x, y));
         next.attempted = true;
+        if (applied && rule.rootWaterCost) world.hydrology.drink(x, y + 1, world.get(x, y + 1), rule.rootWaterCost);
         next.attempts++;
         if (applied && rule.action.type !== 'spawnItem') {
           this.state.invalidateCell(x, y);
