@@ -290,7 +290,11 @@ export class Expedition {
       result.openCraft !== true
     )
       return false;
-    this.bag.changeGrid(3);
+    const station = 'station' in result &&
+      (result.station === 'mill' || result.station === 'oven' || result.station === 'workbench')
+      ? result.station : 'workbench';
+    const gridSize = 'gridSize' in result && result.gridSize === 2 ? 2 : 3;
+    this.bag.changeGrid(gridSize, station);
     return true;
   }
   closeCraft() {

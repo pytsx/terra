@@ -1,5 +1,6 @@
 import { ARMOR_SLOTS, BELT_SIZE, ITEMS, type Slot, type Stack, type SlotRef } from '../catalog';
 import { recipes } from '../craft/RecipeBook';
+import type { Recipe } from '../craft/RecipeBook';
 
 const empty = (length: number): Slot[] => Array.from({ length }, () => null);
 const clone = (slots: readonly Slot[]) => slots.map((s) => (s ? { ...s } : null));
@@ -56,6 +57,7 @@ export class Inventory {
   private readonly slots: Slot[];
   private readonly equipment: Slot[];
   private grid = empty(4);
+  private station: Recipe['station'];
   private cursor: Slot = null;
   private cursorOrigin: SlotRef | null = null;
   constructor(slots: readonly Slot[] = startingSlots(), equipment: readonly Slot[] = empty(4)) {
@@ -196,7 +198,7 @@ export class Inventory {
     return plan ? new Map(plan.slots.map(({ key, total }) => [key, total])) : null;
   }
   private preview() {
-    const output = recipes.match(this.grid, this.size)?.output;
+    const output = recipes.match(this.grid, this.size, this.station)?.output;
     if (
       !output ||
       (ITEMS[output.item].unique &&
@@ -213,7 +215,7 @@ export class Inventory {
   }
   private compatible(recipe: (typeof recipes.recipes)[number]) {
     return recipe.pattern.length <= this.size && recipe.pattern[0].length <= this.size &&
-      (recipe.station !== 'workbench' || this.size === 3);
+      (!recipe.station || recipe.station === this.station);
   }
   craftableRecipes() {
     const available = this.availableCounts();
@@ -283,9 +285,10 @@ export class Inventory {
     });
     return result;
   }
-  changeGrid(size: 2 | 3) {
+  changeGrid(size: 2 | 3, station: Recipe['station'] = size === 3 ? 'workbench' : undefined) {
     for (const stack of this.grid) if (stack) store(this.slots, stack);
     this.grid = empty(size * size);
+    this.station = station;
   }
   cancelCursorTransaction() {
     const stack = this.cursor;

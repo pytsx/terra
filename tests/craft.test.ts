@@ -236,6 +236,17 @@ test('itens de drop e craft consumíveis são classificados pelos assets', () =>
   );
 });
 
+test('moinho e forno liberam somente suas receitas especializadas', () => {
+  const mill = recipes.match([{ item: 'wheat', amount: 1 }, null, null, null], 2, 'mill');
+  assert.deepEqual(mill?.output, { item: 'flour', amount: 1 });
+  assert.equal(recipes.match([{ item: 'wheat', amount: 1 }, null, null, null], 2, 'oven'), undefined);
+  const oven = recipes.match([
+    { item: 'flour', amount: 1 }, { item: 'flour', amount: 1 },
+    { item: 'flour', amount: 1 }, null,
+  ], 2, 'oven');
+  assert.deepEqual(oven?.output, { item: 'bread', amount: 1 });
+});
+
 test('blocos e ferramentas usam tiers de mineração', () => {
   const stone = Object.values(BLOCKS).find((block) => block.name === 'Pedra');
   const deep = Object.values(BLOCKS).find((block) => block.name === 'Rocha profunda');

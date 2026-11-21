@@ -582,6 +582,7 @@ export class Hydrology {
   restore(entries: readonly WaterCell[]) {
     this.columns.clear();
     for (const [x, y, amount] of entries) {
+      if (!Number.isFinite(amount) || amount < 0) continue;
       let column = this.columns.get(x);
       if (!column) this.columns.set(x, column = new Map());
       column.set(y, amount);

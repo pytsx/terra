@@ -32,6 +32,10 @@ import item_raw_meatConfig from './items/raw_meat/config.json';
 import item_raw_meatScript from './items/raw_meat';
 import item_wheatConfig from './items/wheat/config.json';
 import item_wheatScript from './items/wheat';
+import item_flourConfig from './items/flour/config.json';
+import item_flourScript from './items/flour';
+import item_breadConfig from './items/bread/config.json';
+import item_breadScript from './items/bread';
 import item_cooked_beefConfig from './items/cooked_beef/config.json';
 import item_cooked_beefScript from './items/cooked_beef';
 import item_swordConfig from './items/sword/config.json';
@@ -82,6 +86,10 @@ import block_woodConfig from './blocks/WOOD/config.json';
 import block_woodScript from './blocks/WOOD';
 import block_workbenchConfig from './blocks/WORKBENCH/config.json';
 import block_workbenchScript from './blocks/WORKBENCH';
+import block_millConfig from './blocks/MILL/config.json';
+import block_millScript from './blocks/MILL';
+import block_ovenConfig from './blocks/OVEN/config.json';
+import block_ovenScript from './blocks/OVEN';
 import block_waterConfig from './blocks/WATER/config.json';
 import block_waterScript from './blocks/WATER';
 import block_lavaConfig from './blocks/LAVA/config.json';
@@ -157,6 +165,10 @@ import hoeConfig from './items/hoe/config.json';
 import hoeScript from './items/hoe';
 import gateConfig from './items/gate/config.json';
 import gateScript from './items/gate';
+import millConfig from './items/mill/config.json';
+import millScript from './items/mill';
+import ovenConfig from './items/oven/config.json';
+import ovenScript from './items/oven';
 
 const blocks = {
   FARMLAND: { config: FARMLANDConfig, script: FARMLANDScript },
@@ -167,6 +179,8 @@ const blocks = {
   FALLOW: { config: FALLOWConfig, script: FALLOWScript },
   GATE: { config: GATEConfig, script: GATEScript },
   GATE_OPEN: { config: GATE_OPENConfig, script: GATE_OPENScript },
+  MILL: { config: block_millConfig, script: block_millScript },
+  OVEN: { config: block_ovenConfig, script: block_ovenScript },
   "AIR": { config: block_airConfig, script: block_airScript },
   "BEDROCK": { config: block_bedrockConfig, script: block_bedrockScript },
   "BRICK": { config: block_brickConfig, script: block_brickScript },
@@ -202,6 +216,8 @@ export const modularItems = immutable({
   waterBucket: { config: waterBucketConfig, script: waterBucketScript },
   hoe: { config: hoeConfig, script: hoeScript },
   gate: { config: gateConfig, script: gateScript },
+  mill: { config: millConfig, script: millScript },
+  oven: { config: ovenConfig, script: ovenScript },
   "brick": { config: item_brickConfig, script: item_brickScript },
   "coal": { config: item_coalConfig, script: item_coalScript },
   "copper": { config: item_copperConfig, script: item_copperScript },
@@ -223,6 +239,8 @@ export const modularItems = immutable({
   "slime": { config: item_slimeConfig, script: item_slimeScript },
   "raw_meat": { config: item_raw_meatConfig, script: item_raw_meatScript },
   "wheat": { config: item_wheatConfig, script: item_wheatScript },
+  "flour": { config: item_flourConfig, script: item_flourScript },
+  "bread": { config: item_breadConfig, script: item_breadScript },
   "cooked_beef": { config: item_cooked_beefConfig, script: item_cooked_beefScript },
   "sword": { config: item_swordConfig, script: item_swordScript },
   "crystalPick": { config: item_crystalpickConfig, script: item_crystalpickScript },

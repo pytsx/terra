@@ -1,0 +1,7 @@
+{
+  "name": "Pão",
+  "kind": "consumable",
+  "color": "#c98a4a",
+  "use": {"effect": "heal", "amount": 5},
+  "states": {"inventory": true, "dropped": true}
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Farinha",
+  "kind": "material",
+  "color": "#e8d7a2",
+  "states": {"inventory": true, "dropped": true}
+}

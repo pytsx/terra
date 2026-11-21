@@ -131,7 +131,25 @@
     "output": { "item": "hoe", "amount": 1 }
   },
   {
+    "pattern": [["plank", "stone"], ["plank", "stone"]],
+    "output": { "item": "mill", "amount": 1 }
+  },
+  {
+    "pattern": [["stone", "stone"], ["stone", "coal"]],
+    "output": { "item": "oven", "amount": 1 }
+  },
+  {
     "pattern": [["plank", "iron", "plank"]],
     "output": { "item": "gate", "amount": 1 }
+  },
+  {
+    "station": "mill",
+    "pattern": [["wheat"]],
+    "output": { "item": "flour", "amount": 1 }
+  },
+  {
+    "station": "oven",
+    "pattern": [["flour", "flour"], ["flour", null]],
+    "output": { "item": "bread", "amount": 1 }
   }
 ]

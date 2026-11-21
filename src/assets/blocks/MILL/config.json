@@ -1,0 +1,9 @@
+{
+  "id": 30,
+  "name": "Moinho",
+  "color": "#a8794e",
+  "solid": true,
+  "hardness": 0.7,
+  "drop": "mill",
+  "states": {"placed": true, "inventory": true, "dropped": true}
+}

@@ -1,0 +1,9 @@
+{
+  "id": 31,
+  "name": "Forno",
+  "color": "#70483b",
+  "solid": true,
+  "hardness": 0.8,
+  "drop": "oven",
+  "states": {"placed": true, "inventory": true, "dropped": true}
+}

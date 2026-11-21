@@ -1,7 +1,7 @@
 import assets from '../../assets/recipes.json';
 import { ITEMS, type Stack, type Slot } from '../catalog';
 export interface Recipe {
-  station?: 'workbench';
+  station?: 'workbench' | 'mill' | 'oven';
   pattern: readonly (readonly (string | null)[])[];
   output: Stack;
 }
@@ -30,7 +30,7 @@ export class RecipeBook {
     for (const recipe of recipes) {
       const { pattern, output } = recipe,
         width = pattern[0]?.length ?? 0;
-      const key = (recipe.station === 'workbench' ? 'workbench:' : 'personal:') + signature(pattern);
+      const key = (recipe.station ? recipe.station + ':' : 'personal:') + signature(pattern);
       if (
         !key ||
         pattern.length > 3 ||
@@ -48,15 +48,14 @@ export class RecipeBook {
       this.patterns.set(key, recipe);
     }
   }
-  match(slots: readonly Slot[], size: number) {
+  match(slots: readonly Slot[], size: number, station: Recipe['station'] = size === 3 ? 'workbench' : undefined) {
     if (slots.length !== size * size) return undefined;
     const rows = Array.from({ length: size }, (_, y) =>
       slots.slice(y * size, (y + 1) * size).map((slot) => slot?.item ?? null),
     );
     const shape = signature(rows);
-    return size === 3
-      ? this.patterns.get('workbench:' + shape) ?? this.patterns.get('personal:' + shape)
-      : this.patterns.get('personal:' + shape);
+    return this.patterns.get((station ? station + ':' : 'personal:') + shape) ??
+      (!station ? undefined : this.patterns.get('personal:' + shape));
   }
 }
 export const recipes = new RecipeBook(assets as Recipe[]);

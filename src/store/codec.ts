@@ -244,7 +244,7 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
       ? data.water.filter((p): p is [number, number, number] => Array.isArray(p) && p.length === 3 &&
         Number.isSafeInteger(p[0]) && (infinite || (p[0] >= 0 && p[0] < WORLD_W)) &&
         Number.isInteger(p[1]) && p[1] >= 0 && p[1] < WORLD_H &&
-        Number.isInteger(p[2]) && p[2] >= 0 && p[2] <= 2000)
+        Number.isFinite(p[2]) && p[2] >= 0 && p[2] <= 2000)
       : [],
     naturalCells: rawNaturalCells.filter((p): p is [number, number] => Array.isArray(p) && p.length === 2 &&
       Number.isSafeInteger(p[0]) && Number.isInteger(p[1]) && p[1] >= 0 && p[1] < WORLD_H),

@@ -181,6 +181,18 @@ test('água cai, espalha sobre um piso e volta com o mesmo volume ao carregar', 
   assert.equal(save.water.reduce((v, cell) => v + cell[2], 0), 980);
 });
 
+test('volumes fracionários são conservados no save/load', () => {
+  const game = new Expedition('WATER-FRACTION-SAVE');
+  const cells = [[2, 9, 899.875], [2, 10, 0.125], [3, 9, 17.375]] as const;
+  game.world.hydrology.restore(cells);
+  const before = cells.reduce((sum, [, , amount]) => sum + amount, 0);
+  const saved = game.save();
+  const decoded = decodeSave(JSON.stringify(saved), 1);
+  const after = (decoded.water ?? []).reduce((sum, [, , amount]) => sum + amount, 0);
+  assert.equal(after, before);
+  assert.deepEqual(decoded.water, saved.water);
+});
+
 test('uma raposa consome água disponível e pode morrer de fome mesmo hidratada', () => {
   const world = basin(B.STONE), rng = new RNG(42);
   const fox = EntityRegistry.create('fox', TILE, 10 * TILE - 17, 0)!;
