@@ -1,0 +1,29 @@
+{
+  "id": "terra:engenho",
+  "schemaVersion": 1,
+  "blocks": {
+    "WATERMILL": {
+      "id": 35, "name": "Moinho hidráulico", "solid": true, "hardness": 0.9,
+      "color": "#997046", "drop": "watermill",
+      "texture": {"base": "#674835", "detail": [
+        {"x":2,"y":2,"w":20,"h":3,"color":"#b69665"},
+        {"x":3,"y":6,"w":4,"h":16,"color":"#907145"},
+        {"x":10,"y":7,"w":8,"h":15,"color":"#bf955c"},
+        {"x":7,"y":10,"w":14,"h":9,"color":"#b58a54"},
+        {"x":9,"y":12,"w":10,"h":5,"color":"#695243"},
+        {"x":13,"y":9,"w":2,"h":11,"color":"#81634a"}
+      ]}
+    }
+  },
+  "items": {"watermill": {"name":"Moinho hidráulico","block":"WATERMILL"}},
+  "stations": [{
+    "id":"watermill","name":"Moinho hidráulico","block":"WATERMILL","mode":"processing",
+    "capabilities":["grinding","crushing"],"energy":{"type":"hydraulic","workPerVolume":5},
+    "storage":{"inputSlots":2,"outputSlots":2,"fuelSlots":0,"stackLimit":64},
+    "processing":{"speed":1,"automaticRepeat":true}
+  }],
+  "recipes": [{
+    "station":"workbench","pattern":[["plank","iron","plank"],[null,"mill",null]],
+    "output":{"item":"watermill","amount":1}
+  }]
+}

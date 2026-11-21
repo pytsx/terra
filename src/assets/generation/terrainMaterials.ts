@@ -1,4 +1,4 @@
-import type { TerrainMaterialFeature } from './types';
+import type { TerrainMaterialFeature } from '../../business/worldgen/features/types';
 
 export const terrainMaterialFeature = Object.freeze({
   id: 'overworld-geology', strategy: 'terrain-density',

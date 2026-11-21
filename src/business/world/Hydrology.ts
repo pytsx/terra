@@ -21,6 +21,11 @@ const capacity = (id: number) => liquid(id) ? full : Math.round((BLOCKS[id].wate
 export interface WaterState { volume: number; capacity: number; saturation: number }
 
 export class Hydrology {
+  private readonly waterFlowListeners = new Set<(x: number, y: number, volume: number) => void>();
+  onWaterFlow(listener: (x: number, y: number, volume: number) => void) {
+    this.waterFlowListeners.add(listener);
+    return () => this.waterFlowListeners.delete(listener);
+  }
   private readonly listeners = new Set<(x: number, y: number) => void>();
   readonly weather = new RegionalWeather();
   private readonly columns = new Map<number, Map<number, number>>();
@@ -527,6 +532,8 @@ export class Hydrology {
         ? offered - this.percolate(world, x + dx, y + dy, offered)
         : this.fill(world, x + dx, y + dy, offered);
       if (sent) {
+        if (free && liquid(neighbor) && block !== B.LAVA && neighbor !== B.LAVA)
+          for (const listener of this.waterFlowListeners) listener(x, y, sent / full);
         this.write(x, y, block, this.amount(x, y, block) - sent);
         budget -= sent;
         transferred = true;

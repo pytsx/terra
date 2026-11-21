@@ -1,4 +1,7 @@
 import { RNG } from '../../shared/math';
+import { CURRENT_GENERATION } from '../catalog';
+import { scatterAssets, oreDepositFeatures, treeFeatures, terrainMaterialFeature } from '../../assets/generation';
+import { compileSurfaceScatter } from './SurfaceScatter';
 import { AquiferGenerator } from './AquiferGenerator';
 import { CaveGenerator } from './CaveGenerator';
 import { ClimateGenerator } from './ClimateGenerator';
@@ -9,9 +12,6 @@ import { SpawnGenerator } from './SpawnGenerator';
 import { SurfaceFeatureGenerator } from './SurfaceFeatureGenerator';
 import { TerrainDensityGenerator } from './TerrainDensityGenerator';
 import { FeatureRegistry } from './features/FeatureRegistry';
-import { oreDepositFeatures } from './features/oreDeposits';
-import { treeFeatures } from './features/trees';
-import { terrainMaterialFeature } from './features/terrainMaterials';
 import { GenerationPipeline, type ClimateSample, type GenerationContext } from './types';
 
 export const climateGenerator = new ClimateGenerator();
@@ -26,7 +26,7 @@ export const terrainPipeline = new GenerationPipeline([
   new AquiferGenerator(),
   new OreGenerator(resolvedOreDeposits),
   new FloatingIslandGenerator(),
-  new SurfaceFeatureGenerator(resolvedTrees),
+  new SurfaceFeatureGenerator(resolvedTrees, undefined, undefined, compileSurfaceScatter(scatterAssets)),
   new SpawnGenerator(),
 ]);
 export const modernPipeline = new GenerationPipeline([climateGenerator, ...terrainPipeline.stages]);
@@ -38,7 +38,7 @@ export function createGenerationContext(
 ): GenerationContext {
   return {
     ...input,
-    generationVersion: input.generationVersion ?? 5,
+    generationVersion: input.generationVersion ?? CURRENT_GENERATION,
     startY: 0, endY: input.height,
     climate: Array.from({ length: input.width }, (): ClimateSample => ({
       continentalness: 0, erosion: 0, weirdness: 0, peaksValleys: 0, temperature: 0, humidity: 0,

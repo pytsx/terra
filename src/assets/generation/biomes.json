@@ -1,0 +1,7 @@
+[
+  {"name":"Serra rochosa","reliefAbove":34,"rain":1},
+  {"name":"Bosque de coníferas","reliefAbove":18,"rain":0.85},
+  {"name":"Dunas","arid":true,"rain":1},
+  {"name":"Floresta temperada","forested":true,"rain":1},
+  {"name":"Pradaria","rain":0.65}
+]

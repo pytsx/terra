@@ -8,6 +8,7 @@ export class OreGenerator implements WorldGenerator, GenerationStrategy<Resolved
   constructor(private readonly deposits: readonly ResolvedOreDepositFeature[]) {}
   generate(context: GenerationContext, deposits = this.deposits) {
     for (const deposit of deposits) {
+      if (context.generationVersion < (deposit.sinceGeneration ?? 1)) continue;
       const region = new FractalNoise(context.seed ^ deposit.salt, 3, 0.52);
       const attempts = Math.max(1, Math.round(context.width * context.height * deposit.rarity));
       for (let i = 0; i < attempts; i++) {

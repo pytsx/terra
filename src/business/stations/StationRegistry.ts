@@ -1,8 +1,4 @@
-import workbench from '../../assets/stations/workbench.json';
-import mill from '../../assets/stations/mill.json';
-import oven from '../../assets/stations/oven.json';
-import processingAssets from '../../assets/processing-recipes.json';
-import fuelAssets from '../../assets/fuels.json';
+import { production } from '../../assets/production';
 import { B, ITEMS } from '../catalog';
 import type { FuelDefinition, ProcessingRecipe, StationDefinition } from './StationTypes';
 
@@ -14,7 +10,9 @@ export class StationRegistry {
       if (!value.id || this.definitions.has(value.id)) throw new Error(`Estação duplicada: ${value.id}`);
       const block = B[value.block];
       if (block === undefined || this.blocks.has(block)) throw new Error(`Bloco desconhecido da estação: ${value.block}`);
-      if (!['crafting', 'processing'].includes(value.mode) || !['none', 'manual', 'thermal'].includes(value.energy.type)) throw new Error(`Modo ou energia inválida: ${value.id}`);
+      if (!['crafting', 'processing'].includes(value.mode) || !['none', 'manual', 'thermal', 'hydraulic'].includes(value.energy.type)) throw new Error(`Modo ou energia inválida: ${value.id}`);
+      if (value.energy.type === 'hydraulic' && !(Number.isFinite(value.energy.workPerVolume) && value.energy.workPerVolume > 0))
+        throw new Error('Conversão hidráulica inválida: ' + value.id);
       if (!Array.isArray(value.capabilities) || value.capabilities.some(c => typeof c !== 'string' || !c) || new Set(value.capabilities).size !== value.capabilities.length)
         throw new Error(`Capacidades inválidas: ${value.id}`);
       if (value.mode === 'processing') {
@@ -40,6 +38,7 @@ export class StationRegistry {
 }
 
 export class ProcessingRecipeRegistry {
+  private readonly byStation = new WeakMap<StationDefinition, readonly ProcessingRecipe[]>();
   private readonly recipes = new Map<string, ProcessingRecipe>();
   constructor(values: readonly ProcessingRecipe[]) {
     for (const value of values) {
@@ -54,14 +53,28 @@ export class ProcessingRecipeRegistry {
   }
   get(id: string) { return this.recipes.get(id); }
   compatible(definition: StationDefinition) {
-    return [...this.recipes.values()].filter(recipe => recipe.requires.every(cap => definition.capabilities.includes(cap)));
+    let matches = this.byStation.get(definition);
+    if (!matches) {
+      const energy = definition.energy;
+      matches = Object.freeze([...this.recipes.values()].filter(recipe =>
+        recipe.requires.every(cap => definition.capabilities.includes(cap)) &&
+        (!recipe.conditions || (energy.type === 'thermal' &&
+          (recipe.conditions.minTemperature ?? 20) <= energy.maxTemperature &&
+          (recipe.conditions.maxTemperature ?? Infinity) >= 20))));
+      this.byStation.set(definition, matches);
+    }
+    return matches;
   }
 }
 
-export const stationRegistry = new StationRegistry([workbench, mill, oven] as StationDefinition[]);
-export const processingRecipes = new ProcessingRecipeRegistry(processingAssets as ProcessingRecipe[]);
+export const stationRegistry = new StationRegistry(production.stations);
+export const processingRecipes = new ProcessingRecipeRegistry(production.processes);
+const reachable = new Set(stationRegistry.values().filter(s => s.mode === 'processing')
+  .flatMap(s => processingRecipes.compatible(s).map(r => r.id)));
+for (const recipe of production.processes)
+  if (!reachable.has(recipe.id)) throw new Error('Processo sem estação compatível: ' + recipe.id);
 export const fuels = new Map<string, FuelDefinition>();
-for (const value of fuelAssets as FuelDefinition[]) {
+for (const value of production.fuels) {
   if (!Object.hasOwn(ITEMS, value.item) || fuels.has(value.item) ||
       !Number.isFinite(value.burnDuration) || value.burnDuration <= 0 ||
       !Number.isFinite(value.targetTemperature) || value.targetTemperature < 20) throw new Error('Combustível inválido: ' + value.item);

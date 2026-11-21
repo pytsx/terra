@@ -1,4 +1,6 @@
 import { immutable } from './immutable';
+import { extendBlocks, extendItems } from '../business/content/ContentCompiler';
+import { packs } from './packs/generated';
 import { permeabilityFor } from './blocks/permeability';
 
 export type { AssetStates, BlockAssetScript, ItemAssetScript, ToolAssetScript } from './types';
@@ -172,7 +174,7 @@ import millScript from './items/mill';
 import ovenConfig from './items/oven/config.json';
 import ovenScript from './items/oven';
 
-const blocks = {
+const blocks = extendBlocks(packs, {
   FARMLAND: { config: FARMLANDConfig, script: FARMLANDScript },
   WHEAT_SHOOT: { config: WHEAT_SHOOTConfig, script: WHEAT_SHOOTScript },
   RIPE_WHEAT: { config: RIPE_WHEATConfig, script: RIPE_WHEATScript },
@@ -205,14 +207,14 @@ const blocks = {
   "LAVA": { config: block_lavaConfig, script: block_lavaScript },
   "IRON": { config: block_ironConfig, script: block_ironScript },
   "SAPLING": { config: block_saplingConfig, script: block_saplingScript },
-} as const;
+} as const);
 
 for (const [key, asset] of Object.entries(blocks)) {
   Object.assign(asset, { config: { ...permeabilityFor(key, asset.config), ...asset.config } });
 }
 export const modularBlocks = immutable(blocks);
 
-export const modularItems = immutable({
+export const modularItems = immutable(extendItems(packs, {
   wheatSeed: { config: wheatSeedConfig, script: wheatSeedScript },
   bucket: { config: bucketConfig, script: bucketScript },
   waterBucket: { config: waterBucketConfig, script: waterBucketScript },
@@ -255,7 +257,7 @@ export const modularItems = immutable({
   "leatherChestplate": { config: item_leatherChestplateConfig, script: item_leatherChestplateScript },
   "leatherLeggings": { config: item_leatherLeggingsConfig, script: item_leatherLeggingsScript },
   "leatherBoots": { config: item_leatherBootsConfig, script: item_leatherBootsScript },
-} as const);
+} as const));
 
 import { ecologicalEntities } from './entities/ecology';
 

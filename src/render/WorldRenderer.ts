@@ -268,7 +268,7 @@ export class WorldRenderer {
       c.translate(x + 9, y + 18);
       c.rotate(angle);
       const heldAsset = modularItems[swing.item as keyof typeof modularItems];
-      if (heldAsset && 'renderHeld' in heldAsset.script && heldAsset.script.renderHeld) {
+      if (heldAsset && 'renderHeld' in heldAsset.script && typeof heldAsset.script.renderHeld === 'function') {
         heldAsset.script.renderHeld(c);
       } else if (!swing.item) {
         c.fillStyle = '#e6ab78';

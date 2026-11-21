@@ -9,9 +9,11 @@ export class SurfaceFeatureGenerator implements WorldGenerator {
     private readonly trees: readonly ResolvedTreeFeature[],
     private readonly landscapeStrategy = new LandscapeTreeStrategy(),
     private readonly legacyStrategy = new LegacyTreeStrategy(),
+    private readonly scatter?: (context: GenerationContext) => void,
   ) {}
   generate(context: GenerationContext) {
     if (context.landscape) this.landscapeStrategy.generate(context, this.trees);
     else this.legacyStrategy.generate(context);
+    this.scatter?.(context);
   }
 }

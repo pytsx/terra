@@ -1,3 +1,4 @@
 {
-  "name": "Balde vazio"
+  "name": "Balde vazio",
+  "waterTransfer": { "direction": "fill", "result": "waterBucket", "message": "Balde cheio." }
 }

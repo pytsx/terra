@@ -1,4 +1,4 @@
-import assets from '../../assets/recipes.json';
+import { production } from '../../assets/production';
 import { ITEMS, type Stack, type Slot } from '../catalog';
 export interface Recipe {
   station?: string;
@@ -60,4 +60,4 @@ export class RecipeBook {
       (!station ? undefined : this.patterns.get('personal:' + shape));
   }
 }
-export const recipes = new RecipeBook(assets as Recipe[]);
+export const recipes = new RecipeBook(production.recipes);

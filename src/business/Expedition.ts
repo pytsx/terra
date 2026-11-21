@@ -20,6 +20,7 @@ import { Inventory } from './inventory/Inventory';
 import { RNG, clamp } from '../shared/math';
 import type { ExpeditionSave } from './save';
 import { rainIntensity } from './weather';
+import { biomeRain } from '../assets/generation';
 import { SimulationRegion } from './simulation/SimulationRegion';
 import { EntityUpdateGroup } from './simulation/EntityUpdateGroup';
 import { GAME_DAY_SECONDS } from './time';
@@ -112,6 +113,7 @@ export class Expedition {
   private readonly stations: StationStore;
   private openedStationId: string | null = null;
   private readonly processing = new ProcessingSystem();
+  private readonly waterFlow = new Map<string, number>();
   private activeEntityCount = 0;
   private swing: { item: string; angle: number; started: number; duration: number } | null = null;
 
@@ -143,6 +145,11 @@ export class Expedition {
     this.placementMode = save?.placementMode ?? 'approach';
     this.drops = new DroppedItems(save?.drops);
     this.stations = new StationStore(save?.stations);
+    this.terrain.hydrology.onWaterFlow((x, y, volume) => {
+      const station = this.stations.getAt(x, y - 1);
+      if (station && stationRegistry.get(station.definitionId)?.energy.type === 'hydraulic')
+        this.waterFlow.set(station.id, (this.waterFlow.get(station.id) ?? 0) + volume);
+    });
     // Legacy worlds store installed machines as tile edits, not station records.
     // Only examine recorded edits, never generate the entire world.
     const installed = new Map<string, string>();
@@ -242,9 +249,9 @@ export class Expedition {
     const definition = stationRegistry.get(station.definitionId)!;
     const copy = (slots: StationInstance['input']) => slots.map(s => s ? { ...s } : null);
     return {
-      id: station.id, name: definition.name, definitionId: definition.id,
+      id: station.id, name: definition.name, definitionId: definition.id, block: B[definition.block],
       input: copy(station.input), output: copy(station.output), fuel: copy(station.fuel),
-      enabled: station.enabled, manual: definition.energy.type === 'manual',
+      enabled: station.enabled, manual: definition.energy.type === 'manual', energy: definition.energy.type,
       status: this.processing.status(station), manualWork: station.manualWork,
       progress: station.process ? station.process.elapsedWork / station.process.requiredWork : 0,
       temperature: station.energyState.temperature,
@@ -286,16 +293,12 @@ export class Expedition {
     const held = this.bag.held(), slot = station[area][index];
     if (!held) {
       if (!slot || !this.bag.receiveCursor(slot)) return false;
-      station[area][index] = null; station.revision++; return true;
+      return !!this.processing.takeSlot(station, area, index);
     }
-    if (area === 'output' || (slot && (slot.item !== held.item || slot.durability !== held.durability))) return false;
-    if (ITEMS[held.item].tool || ITEMS[held.item].armor || ITEMS[held.item].unique) return false;
-    if (area === 'fuel' && (definition.energy.type !== 'thermal' || !definition.energy.acceptedFuels.includes(held.item))) return false;
-    if (area === 'input' && !processingRecipes.compatible(definition).some(r => r.inputs.some(s => s.item === held.item))) return false;
-    const amount = Math.min(held.amount, definition.storage!.stackLimit - (slot?.amount ?? 0), value === 1 ? 1 : Infinity);
-    if (!Number.isSafeInteger(amount) || amount <= 0 || !this.bag.takeCursor(amount)) return false;
-    station[area][index] = { ...held, amount: (slot?.amount ?? 0) + amount };
-    station.revision++; return true;
+    if (area === 'output') return false;
+    const left = this.processing.insertAt(station, area, index, held, value === 1 ? 1 : held.amount);
+    const moved = held.amount - left;
+    return moved > 0 && this.bag.takeCursor(moved);
   }
   executeCommand(line: string) {
     return this.commands.executeLine(line, 'player');
@@ -328,7 +331,7 @@ export class Expedition {
     if (undergroundDepth > 4 || !this.raining) return 0;
     const exposure = clamp(1 - Math.max(0, undergroundDepth) / 5, 0, 1);
     const biome = this.terrain.biomeAt(Math.floor(this.player.x / TILE));
-    return (biome === 'Pradaria' ? 0.65 : biome === 'Bosque de coníferas' ? 0.85 : 1) * exposure;
+    return biomeRain(biome) * exposure;
   }
   setZoom(value: number) {
     return this.commands.run(this.actions.setZoom(value));
@@ -474,14 +477,14 @@ export class Expedition {
   private performInteractEntity(aim: Point) {
     const hit = this.aimedContact(aim);
     const held = this.bag.at(this.selected)?.item;
-    if (held === 'bucket' || held === 'waterBucket') {
+    const transfer = held && ITEMS[held].waterTransfer;
+    if (transfer) {
       const x = Math.floor(aim.x / TILE), y = Math.floor(aim.y / TILE), p = this.player;
       if (Math.hypot(aim.x - p.x - p.w / 2, aim.y - p.y - p.h / 2) > TILE * 5.35 ||
         !this.terrain.inside(x, y) || (hit && (hit.kind !== 'block' || hit.tx !== x || hit.ty !== y))) return false;
-      const pour = held === 'waterBucket';
-      if (this.terrain.hydrology.transferBucket(x, y, this.terrain.get(x, y), pour)) {
-        this.bag.exchangeOne(this.selected, pour ? 'bucket' : 'waterBucket');
-        this.events.push({ type: 'message', text: pour ? 'Água despejada.' : 'Balde cheio.' });
+      if (this.terrain.hydrology.transferBucket(x, y, this.terrain.get(x, y), transfer.direction === 'pour')) {
+        this.bag.exchangeOne(this.selected, transfer.result);
+        this.events.push({ type: 'message', text: transfer.message });
       }
       return true;
     }
@@ -489,11 +492,12 @@ export class Expedition {
       this.terrain.set(hit.tx, hit.ty, B[BLOCKS[hit.id].toggle!]);
       return true;
     }
-    if (held && ITEMS[held].tool?.role === 'till' && hit?.kind === 'block' && (hit.id === B.DIRT || hit.id === B.GRASS) &&
+    const tilled = hit?.kind === 'block' && BLOCKS[hit.id].tilledBlock;
+    if (held && ITEMS[held].tool?.role === 'till' && hit?.kind === 'block' && tilled &&
       this.terrain.get(hit.tx, hit.ty - 1) === B.AIR) {
-      this.terrain.set(hit.tx, hit.ty, B.FARMLAND);
+      this.terrain.set(hit.tx, hit.ty, B[tilled]);
       this.wearHeldTool();
-      this.events.push({ type: 'message', text: 'Solo preparado para plantar trigo.' });
+      this.events.push({ type: 'message', text: 'Solo preparado para o plantio.' });
       return true;
     }
     if (hit?.kind !== 'entity') return false;
@@ -748,7 +752,7 @@ export class Expedition {
         this.openedStationId = null;
       }
     }
-    this.processing.step(dt, this.stations.active(region));
+    this.waterFlow.clear();
     this.mobs = this.entityRegions.activate(region);
     const activeMobs = this.entityUpdates.select(this.mobs, region);
     this.activeEntityCount = activeMobs.length;
@@ -776,6 +780,7 @@ export class Expedition {
           this.commands.run(this.actions.spawnDrop({ item, amount: 1, x: (tx + 0.5) * TILE, y: ty * TILE - 6 }, 0, -45));
       },
     );
+    this.processing.step(dt, this.stations.active(region), this.waterFlow);
     this.drops.step(dt, this.terrain, p, ({ item, amount, durability }) => {
       this.commands.run(this.actions.collect(item, amount, durability));
       this.events.push({ type: 'message', text: `Recolheu ${amount} × ${ITEMS[item].name}.` });

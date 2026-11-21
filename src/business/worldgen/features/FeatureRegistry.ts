@@ -18,14 +18,15 @@ function finite(value: number, label: string, feature: string) {
 export class FeatureRegistry {
   private readonly ids = new Set<string>();
 
-  private claim(id: string) {
+  private claim(id: string, version?: number) {
+    if (version !== undefined && (!Number.isInteger(version) || version < 1)) throw new Error('Versão de geração inválida: ' + id);
     if (!id || this.ids.has(id)) throw new Error(`Feature duplicada ou sem id: ${id}`);
     this.ids.add(id);
   }
 
   ore(features: readonly OreDepositFeature[]): readonly ResolvedOreDepositFeature[] {
     return Object.freeze(features.map((feature) => {
-      this.claim(feature.id);
+      this.claim(feature.id, feature.sinceGeneration);
       if (feature.strategy !== 'ore-vein') throw new Error(`Feature ${feature.id}: estratégia inválida`);
       finite(feature.minDepth, 'minDepth', feature.id);
       finite(feature.maxDepth, 'maxDepth', feature.id);
@@ -43,7 +44,7 @@ export class FeatureRegistry {
 
   trees(features: readonly TreeFeature[]): readonly ResolvedTreeFeature[] {
     return Object.freeze(features.map((feature) => {
-      this.claim(feature.id);
+      this.claim(feature.id, feature.sinceGeneration);
       if (feature.strategy !== 'landscape-tree') throw new Error(`Feature ${feature.id}: estratégia inválida`);
       if (!Number.isInteger(feature.spacing) || feature.spacing < 1 || !Number.isInteger(feature.minHeight) ||
         feature.minHeight < 1 || !Number.isInteger(feature.heightVariation) || feature.heightVariation < 1)

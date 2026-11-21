@@ -93,7 +93,7 @@ export class InventoryView {
     dialog.classList.remove('station-mill', 'station-oven');
     element('bagSeed').textContent = m.station ? '' : m.seed;
     element('bag-title').textContent = m.processing?.name ?? (m.station ? ITEMS[m.station]?.name ?? m.station : 'Mochila de campo');
-    element('craftSize').textContent = '';
+    element('craftSize').textContent = m.processing ? '' : m.size + ' × ' + m.size;
     const grid = element('craftGrid');
     grid.style.setProperty('--side', String(m.size));
     grid.classList.toggle('recipe-preview', !!m.recipePreview);
@@ -144,7 +144,8 @@ export class InventoryView {
     this.drawProcessing(m.processing);
     const station = m.processing?.definitionId ?? m.station;
     element('packEmblem').replaceChildren(
-      station ? this.icons.item(station) : node('span', undefined, 'bag-icon'),
+      m.processing ? this.icons.draw(m.processing.block) :
+        station && ITEMS[station] ? this.icons.item(station) : node('span', undefined, 'bag-icon'),
     );
   }
   private drawProcessing(model: BagModel['processing']) {
@@ -165,7 +166,7 @@ export class InventoryView {
       const progress = node('progress'); progress.max = 1;
       const thermal = node('p', undefined, 'processing-thermal');
       const controls = node('div', undefined, 'processing-controls');
-      for (const [action, label] of [['enable','Ativar / Pausar'],['cancel','Cancelar lote'],['start','Segure para moer']]) {
+      for (const [action, label] of [['enable','Ativar / Pausar'],['cancel','Cancelar lote'],['start','Segure para trabalhar']]) {
         const button = node('button', label);
         button.dataset.stationAction = action;
         if (action !== 'start' || model.manual) controls.append(button);
@@ -188,6 +189,7 @@ export class InventoryView {
     panel.querySelector('.processing-status')!.textContent = model.status + (model.enabled ? '' : ' · Desativada');
     panel.querySelector('progress')!.value = model.progress;
     panel.querySelector('.processing-thermal')!.textContent = model.manual ? 'Trabalho manual' :
+      model.energy === 'hydraulic' ? 'Roda hidráulica · instale sobre água corrente' :
       Math.floor(model.temperature) + ' °C · ' + (model.burningFuel ? Math.ceil(model.burningFuel.remainingSeconds) + ' s de combustível' : 'Sem chama');
   }
   private drawPlayer(canvas: HTMLCanvasElement, model: BagModel) {

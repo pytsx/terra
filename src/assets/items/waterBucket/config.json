@@ -1,3 +1,4 @@
 {
-  "name": "Balde com água"
+  "name": "Balde com água",
+  "waterTransfer": { "direction": "pour", "result": "bucket", "message": "Água despejada." }
 }

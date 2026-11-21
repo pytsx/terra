@@ -1,17 +1,19 @@
 import { clamp, noise1, rand01, smooth } from '../../shared/math';
 import { ClimateGenerator } from './ClimateGenerator';
+import { biomeVariants, baseBiomes } from '../../assets/generation';
+import { CURRENT_GENERATION } from '../catalog';
 import type { ClimateSample } from './types';
 
-export type Biome = 'Pradaria' | 'Floresta temperada' | 'Bosque de coníferas' | 'Serra rochosa' | 'Dunas';
+export type Biome = string;
 
 /** Samples relief, climate and biomes, without placing world features. */
 export class Landscape {
   private readonly margin = 4;
   private readonly elevations: Int16Array;
-  private readonly biomes: Biome[] = [];
+  private readonly biomes: string[] = [];
   readonly climate: ClimateSample[];
 
-  constructor(seed: number, origin: number, width: number) {
+  constructor(seed: number, origin: number, width: number, version = CURRENT_GENERATION) {
     this.elevations = new Int16Array(width + this.margin * 2);
     const samples: ClimateSample[] = [];
     new ClimateGenerator().generate({
@@ -26,8 +28,10 @@ export class Landscape {
       const relief = slope * (32 + 12 * rand01(range, 2, seed) + 12 * noise1(x / 22, seed));
       const arid = climate.temperature > 0.1 && climate.humidity < -0.03;
       const forest = climate.humidity + noise1(x / 105, seed ^ 673) * 0.8 > 0.33;
-      this.biomes[i] = relief > 34 ? 'Serra rochosa' : relief > 18 ? 'Bosque de coníferas' :
-        arid ? 'Dunas' : forest ? 'Floresta temperada' : 'Pradaria';
+      const parent = baseBiomes.find(b => (b.reliefAbove === undefined || relief > b.reliefAbove) &&
+        (!b.arid || arid) && (!b.forested || forest))!.name;
+      this.biomes[i] = biomeVariants.find(b => version >= b.sinceGeneration &&
+        b.parent === parent && climate.humidity >= b.minHumidity)?.name ?? parent;
       const dunes = arid ? 5 * noise1(x / 18, seed ^ 893) : 0;
       this.elevations[i] = clamp(Math.round(10 + this.elevations[i] * 0.94 - relief - dunes), 14, 116);
     }

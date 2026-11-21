@@ -3,6 +3,7 @@ import type { Slot, Stack } from '../catalog';
 export type EnergyDefinition =
   | { type: 'none' }
   | { type: 'manual'; workRate: number }
+  | { type: 'hydraulic'; workPerVolume: number }
   | { type: 'thermal'; acceptedFuels: readonly string[]; maxTemperature: number; heatingRate: number; coolingRate: number };
 
 export interface StationDefinition {

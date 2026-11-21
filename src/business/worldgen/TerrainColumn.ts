@@ -19,7 +19,7 @@ export class TerrainColumn {
     this.originX = cx * W;
     this.rngSeed = mixHash(seed, cx, 0x4c11);
     if (version >= 4) {
-      this.landscape = new Landscape(seed, this.originX, W);
+      this.landscape = new Landscape(seed, this.originX, W, version);
       this.climate = this.landscape.climate;
       for (let x = 0; x < W; x++) this.surface[x] = this.landscape.height(x);
     } else climateGenerator.generate({

@@ -61,3 +61,18 @@ test('cancelar e remover estação conserva ingredientes sem repetir a recupera�
   assert.deepEqual(store.remove(mill.id), []);
   assert.notEqual(store.create('mill', -1, 12).id, mill.id);
 });
+
+test('receitas artesanais compartilham capacidades e regras centralizadas de slots', () => {
+  const store = new StationStore(), system = new ProcessingSystem();
+  const mill = store.create('mill', 0, 12);
+  assert.equal(system.insertAt(mill, 'input', 0, { item: 'gravel', amount: 3 }, 1), 2);
+  assert.equal(system.insertAt(mill, 'input', 0, { item: 'wood', amount: 1 }), 1);
+  system.setManualWork(mill, true);
+  system.step(6, [mill]);
+  assert.deepEqual(system.takeSlot(mill, 'output', 0), { item: 'sand', amount: 2 });
+
+  const oven = store.create('oven', 1, 12);
+  assert.equal(system.insertAt(oven, 'input', 0, { item: 'raw_meat', amount: 1 }), 0);
+  assert.equal(system.insertAt(oven, 'fuel', 0, { item: 'gravel', amount: 1 }), 1);
+  assert.equal(system.insertAt(oven, 'fuel', 0, { item: 'wood', amount: 1 }), 0);
+});

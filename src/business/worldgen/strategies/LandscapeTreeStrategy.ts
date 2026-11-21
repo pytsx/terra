@@ -12,6 +12,7 @@ export class LandscapeTreeStrategy implements GenerationStrategy<ResolvedTreeFea
     const landscape = context.landscape;
     if (!landscape) return;
     for (const feature of features) for (let x = -this.margin; x < context.width + this.margin; x++) {
+      if (context.generationVersion < (feature.sinceGeneration ?? 1)) continue;
       const gx = context.globalX(x), cell = Math.floor(gx / feature.spacing);
       if (gx !== cell * feature.spacing + Math.floor(rand01(cell, 3, context.seed) * (feature.spacing - 1))) continue;
       if (Math.abs(x - context.spawnX) < 8) continue;

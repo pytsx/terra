@@ -1,4 +1,4 @@
-import type { OreDepositFeature } from './types';
+import type { OreDepositFeature } from '../../business/worldgen/features/types';
 
 export const oreDepositFeatures = Object.freeze([
   { id: 'coal', strategy: 'ore-vein', block: 'COAL', replace: ['STONE', 'DEEP'], minDepth: 8, maxDepth: 76, rarity: 0.0052, maxRadius: 3, salt: 0x0c01 },

@@ -1,5 +1,6 @@
 {
   "id": 1,
+  "tilledBlock": "FARMLAND",
   "bonusDrop": { "item": "wheatSeed", "amount": 1 },
   "name": "Grama",
   "color": "#75ba68",

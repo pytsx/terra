@@ -5,11 +5,12 @@
   "type": "module",
   "packageManager": "pnpm@12.8.1",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "pnpm content:check && vite",
+    "content:check": "node tools/index-content.mjs && tsc --noEmit && tsx tools/check-content.ts",
+    "build": "pnpm content:check && vite build",
     "preview": "vite preview",
-    "test": "tsx --test tests/*.test.ts",
-    "test:browser": "tsx --test tests/browser/*.test.ts"
+    "test": "node tools/index-content.mjs && tsx --test tests/*.test.ts",
+    "test:browser": "node tools/index-content.mjs && tsx --test --test-concurrency=1 tests/browser/*.test.ts"
   },
   "devDependencies": {
     "playwright": "1.62.0",

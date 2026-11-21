@@ -1,5 +1,5 @@
-import type { TreeFeature } from './types';
-import oakTree from '../../../assets/features/oak-tree.json';
+import type { TreeFeature } from '../../business/worldgen/features/types';
+import oakTree from '../features/oak-tree.json';
 
 export const treeFeatures = Object.freeze([
   {

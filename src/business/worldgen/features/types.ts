@@ -4,6 +4,7 @@ export type BlockKey = string;
 
 /** Declarative input: block names are resolved once, before generation starts. */
 export interface FeatureSpecification {
+  readonly sinceGeneration?: number;
   readonly id: string;
   readonly strategy: string;
 }

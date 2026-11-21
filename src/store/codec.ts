@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, BLOCKS, ITEMS, BELT_SIZE, TILE, WORLD_H, WORLD_W, type Slot } from '../business/catalog';
+import { ARMOR_SLOTS, BLOCKS, ITEMS, BELT_SIZE, TILE, WORLD_H, WORLD_W, CURRENT_GENERATION, type Slot } from '../business/catalog';
 import { startingSlots } from '../business/inventory/Inventory';
 import type { BlockDamage, DroppedSave, EntityRegionSave, EntitySave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
 import { EntityRegistry } from '../business/entities/EntityRegistry';
@@ -74,7 +74,8 @@ function decodeStations(value: unknown, infinite: boolean): StationStoreSave | u
     if (typeof station.id !== 'string' || !station.id || ids.has(station.id) || typeof definitionId !== 'string') continue;
     const definition = stationRegistry.get(definitionId); if (!definition || definition.mode !== 'processing') continue;
     const x = station.x, y = station.y;
-    if (!Number.isSafeInteger(x) || (!infinite && (x < 0 || x >= WORLD_W)) || !Number.isInteger(y) || y < 0 || y >= WORLD_H) continue;
+    if (typeof x !== 'number' || !Number.isSafeInteger(x) || (!infinite && (x < 0 || x >= WORLD_W)) ||
+        typeof y !== 'number' || !Number.isInteger(y) || y < 0 || y >= WORLD_H) continue;
     const position = `${x},${y}`; if (occupied.has(position)) continue;
     const decodeSlots = (source: unknown, count: number) => Array.isArray(source) && source.length === count ? source.map(decodeSlot) : undefined;
     const input = decodeSlots(station.input, definition.storage!.inputSlots), output = decodeSlots(station.output, definition.storage!.outputSlots),
@@ -87,7 +88,7 @@ function decodeStations(value: unknown, infinite: boolean): StationStoreSave | u
     let process: StationSave['process'] = null;
     if (station.process && typeof station.process === 'object' && !Array.isArray(station.process)) {
       const job = object(station.process), recipe = typeof job.recipeId === 'string' ? processingRecipes.get(job.recipeId) : undefined;
-      if (recipe && recipe.requires.every(cap => definition.capabilities.includes(cap)) && Array.isArray(job.reservedInputs)) process = {
+      if (recipe && processingRecipes.compatible(definition).includes(recipe) && Array.isArray(job.reservedInputs)) process = {
         recipeId: recipe.id, elapsedWork: numeric(job.elapsedWork, 0, 0, recipe.work), requiredWork: recipe.work,
         reservedInputs: job.reservedInputs.map(decodeSlot).filter((s): s is NonNullable<Slot> => !!s),
         status: job.status === 'processing' || job.status === 'blocked' ? job.status : 'paused',
@@ -108,7 +109,7 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
     throw new Error('Versão de save desconhecida.');
   if (typeof data.seed !== 'string' || !data.seed.trim() || !Array.isArray(data.edits))
     throw new Error('Mundo inválido.');
-  const generationVersion = Math.floor(numeric(data.generationVersion, 1, 1, 5));
+  const generationVersion = Math.floor(numeric(data.generationVersion, 1, 1, CURRENT_GENERATION));
   const infinite = generationVersion >= 3;
   const player = object(data.player);
   if (
@@ -140,7 +141,8 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
     const upgrades = Array.isArray(data.upgrades)
       ? data.upgrades.filter(
           (id): id is string =>
-            typeof id === 'string' && Object.hasOwn(ITEMS, id) && !!ITEMS[id].unique,
+            typeof id === 'string' && Object.hasOwn(ITEMS, id) &&
+            (!!ITEMS[id].unique || !!ITEMS[id].tool || !!ITEMS[id].armor),
         )
       : [];
     slots = startingSlots(legacyStock, upgrades);

@@ -1,4 +1,8 @@
 [
   {"id":"wheat.grinding","requires":["grinding"],"inputs":[{"item":"wheat","amount":1}],"outputs":[{"item":"flour","amount":1}],"work":4},
-  {"id":"bread.baking","requires":["baking"],"inputs":[{"item":"dough","amount":1}],"outputs":[{"item":"bread","amount":1}],"work":15,"conditions":{"minTemperature":180,"maxTemperature":250}}
+  {"id":"gravel.crushing","requires":["crushing"],"inputs":[{"item":"gravel","amount":1}],"outputs":[{"item":"sand","amount":2}],"work":6},
+  {"id":"bread.baking","requires":["baking"],"inputs":[{"item":"dough","amount":1}],"outputs":[{"item":"bread","amount":1}],"work":15,"conditions":{"minTemperature":180,"maxTemperature":250}},
+  {"id":"meat.cooking","requires":["cooking"],"inputs":[{"item":"raw_meat","amount":1}],"outputs":[{"item":"cooked_beef","amount":1}],"work":10,"conditions":{"minTemperature":120,"maxTemperature":220}},
+  {"id":"brick.firing","requires":["firing"],"inputs":[{"item":"dirt","amount":2}],"outputs":[{"item":"brick","amount":1}],"work":18,"conditions":{"minTemperature":250,"maxTemperature":350}},
+  {"id":"meat.drying","requires":["drying"],"inputs":[{"item":"beef","amount":1}],"outputs":[{"item":"raw_meat","amount":1}],"work":20,"conditions":{"minTemperature":45,"maxTemperature":90}}
 ]

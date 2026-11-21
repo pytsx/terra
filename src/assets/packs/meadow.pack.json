@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "terra:campina",
+  "biomes": [
+    {"name": "Campina úmida", "parent": "Pradaria", "minHumidity": 0.15, "rain": 1, "sinceGeneration": 6}
+  ],
+  "species": [{
+    "config": {
+      "id": "marshDeer", "name": "Cervo da campina", "width": 29, "height": 25,
+      "speed": 41, "interval": 2.8, "health": 8, "activeRadius": 2160,
+      "diet": {"food": "grass"}, "substrate": ["GRASS"],
+      "spawn": {"weight": 3, "biomes": ["Campina úmida"]}
+    },
+    "behaviors": [
+      {"action": "flee", "target": "wolf", "radius": 7},
+      {"action": "activity", "when": "night", "result": "rest"},
+      {"action": "graze"}
+    ],
+    "sprite": {
+      "rows": [".......c.c.", ".......ccc.", "........ab.", ".baaaaabaa.", "aaaaaaaabae", ".abbbaa....", "..c..ac....", "..c...c...."],
+      "palette": {"a":"#a96c44", "b":"#dfae78", "c":"#67452f", "e":"#332820"}
+    }
+  }]
+}

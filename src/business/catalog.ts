@@ -5,7 +5,7 @@ export const TILE = 24,
   WORLD_W = 700,
   WORLD_H = 256;
 export const LEGACY_WORLD_H = 158;
-export const CURRENT_GENERATION = 5;
+export const CURRENT_GENERATION = 6;
 export const CHUNK_WIDTH = 64;
 export const CHUNK_HEIGHT = 32;
 export const BELT_SIZE = 9;
@@ -29,6 +29,7 @@ export interface FluidConfig {
   pressure: number;
 }
 export interface Block {
+  tilledBlock?: string;
   fertile?: boolean;
   support?: string;
   toggle?: string;
@@ -57,6 +58,7 @@ export type ToolIcon = string;
 export const ARMOR_SLOTS = ['head', 'chest', 'legs', 'feet'] as const;
 export type ArmorSlot = (typeof ARMOR_SLOTS)[number];
 export interface Item {
+  waterTransfer?: { direction: 'fill' | 'pour'; result: string; message: string };
   name: string;
   kind?: 'item' | 'material' | 'consumable' | 'tool' | 'armor' | 'block';
   hit?: { damage: number; reach: number; cooldown: number };
@@ -105,9 +107,15 @@ for (const [key, block] of Object.entries(definitions)) {
   )
     throw new Error('Definição de bloco inválida: ' + key);
   usedIds.add(block.id);
+  if ([block.support, block.tilledBlock, block.spentSoil, block.toggle].some(ref => ref !== undefined && !Object.hasOwn(B, ref)) ||
+      block.bonusDrop && (!Object.hasOwn(ITEMS, block.bonusDrop.item) ||
+        !Number.isSafeInteger(block.bonusDrop.amount) || block.bonusDrop.amount < 1))
+    throw new Error('Suporte ou colheita inválida: ' + key);
 }
 const initialBeltSlots = new Set<number>();
 for (const [id, item] of Object.entries(ITEMS)) {
+  if (item.waterTransfer && (!['fill', 'pour'].includes(item.waterTransfer.direction) ||
+      !Object.hasOwn(ITEMS, item.waterTransfer.result))) throw new Error('Transferência de água inválida: ' + id);
   if (item.initial !== undefined && (!Number.isSafeInteger(item.initial) || item.initial < 0))
     throw new Error('Quantidade inicial inválida: ' + id);
   if (item.slot !== undefined) {
