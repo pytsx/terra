@@ -1,7 +1,7 @@
 import assets from '../../assets/recipes.json';
 import { ITEMS, type Stack, type Slot } from '../catalog';
 export interface Recipe {
-  station?: 'workbench' | 'mill' | 'oven';
+  station?: string;
   pattern: readonly (readonly (string | null)[])[];
   output: Stack;
   byproducts?: readonly Stack[];

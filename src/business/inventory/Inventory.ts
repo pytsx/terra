@@ -96,13 +96,6 @@ export class Inventory {
       ? slots
       : undefined;
   }
-  private acceptsGridItem(index: number, item: string) {
-    if (this.station !== 'mill') return true;
-    // The mill has two meaningful cells in its 2×2 backing grid: product at
-    // the top and fuel directly below it. The other cells are intentionally
-    // unavailable, so arbitrary items cannot be inserted as fuel.
-    return index === 0 ? item === 'wheat' : index === 2 ? item === 'coal' || item === 'wood' : false;
-  }
   at(index: number): Readonly<Stack> | null {
     const stack = this.slots[index];
     return stack ? { ...stack } : null;
@@ -135,7 +128,6 @@ export class Inventory {
     const a = src[from.index],
       b = dst[to.index];
     if (!a) return false;
-    if (to.area === 'grid' && !this.acceptsGridItem(to.index, a.item)) return false;
     if (to.area === 'equipment' && (ITEMS[a.item].armor?.slot !== ARMOR_SLOTS[to.index] || a.amount !== 1))
       return false;
     if (from.area === 'equipment' && to.area === 'grid') return false;
@@ -165,7 +157,6 @@ export class Inventory {
       cells[ref.index] = null;
       return true;
     }
-    if (ref.area === 'grid' && !this.acceptsGridItem(ref.index, this.cursor.item)) return false;
     if (ref.area === 'equipment' &&
       (ITEMS[this.cursor.item].armor?.slot !== ARMOR_SLOTS[ref.index] || this.cursor.amount !== 1))
       return false;
@@ -347,6 +338,7 @@ export class Inventory {
     for (const stack of this.grid) if (stack) store(this.slots, stack);
     this.grid = empty(size * size);
     this.station = station;
+    this.inspectedRecipe = null;
   }
   cancelCursorTransaction() {
     const stack = this.cursor;
@@ -401,6 +393,17 @@ export class Inventory {
       }
     });
     return broken;
+  }
+  // The station transfer validates both sides before invoking these cursor operations.
+  takeCursor(amount: number) {
+    if (!this.cursor || !Number.isSafeInteger(amount) || amount <= 0 || amount > this.cursor.amount) return false;
+    this.cursor.amount -= amount;
+    if (!this.cursor.amount) { this.cursor = null; this.cursorOrigin = null; }
+    return true;
+  }
+  receiveCursor(stack: Stack) {
+    if (this.cursor) return false;
+    this.cursor = { ...stack }; this.cursorOrigin = null; return true;
   }
   held() { return this.cursor && { ...this.cursor }; }
   belt() { return clone(this.slots.slice(0, BELT_SIZE)); }

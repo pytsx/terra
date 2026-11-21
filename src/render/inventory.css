@@ -585,3 +585,16 @@
   .equipment-slots .cell { width: 34px; height: 28px; }
   .backpack .slot-grid .cell { height: 32px; }
 }
+
+/* Processing stations share the inventory modal, not the crafting grid. */
+.processing-mode .craft-station > .section-title, .processing-mode .craft-flow, .processing-mode .recipe-book { display: none; }
+.processing-mode .bag-body { grid-template-columns: 1fr; }
+.processing-mode .craft-station { width: 100%; }
+.processing-panel { width: 100%; display: grid; gap: 8px; color: #353535; font: 11px var(--mono); }
+.processing-row { display: flex; align-items: center; gap: 8px; }
+.processing-row[hidden] { display: none; }
+.processing-slots, .processing-controls { display: flex; gap: 4px; flex-wrap: wrap; }
+.processing-slots .cell { height: 36px; width: 36px; }
+.processing-panel progress { width: 100%; accent-color: #779557; }
+.processing-status, .processing-thermal { margin: 0; }
+.processing-controls button { padding: 6px; cursor: pointer; }

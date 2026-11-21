@@ -236,31 +236,21 @@ test('itens de drop e craft consumíveis são classificados pelos assets', () =>
   );
 });
 
-test('moinho e forno liberam somente suas receitas especializadas', () => {
-  const mill = recipes.match([
-    { item: 'wheat', amount: 1 }, null,
-    { item: 'coal', amount: 1 }, null,
-  ], 2, 'mill');
-  assert.deepEqual(mill?.output, { item: 'flour', amount: 1 });
-  assert.equal(recipes.match([{ item: 'wheat', amount: 1 }, null, null, null], 2, 'oven'), undefined);
-  const oven = recipes.match([
-    { item: 'flour', amount: 1 }, { item: 'flour', amount: 1 },
-    { item: 'flour', amount: 1 }, null,
-  ], 2, 'oven');
-  assert.deepEqual(oven?.output, { item: 'bread', amount: 1 });
+test('farinha e pão não são mais produzidos instantaneamente no crafting', () => {
+  assert.equal(recipes.match([{ item: 'wheat', amount: 1 }, null, { item: 'coal', amount: 1 }, null], 2, 'mill'), undefined);
+  assert.equal(recipes.match([{ item: 'flour', amount: 1 }, { item: 'flour', amount: 1 }, { item: 'flour', amount: 1 }, null], 2, 'oven'), undefined);
 });
 
-test('moinho restringe o slot superior ao ingrediente e o inferior ao combustível', () => {
-  const pack = new Inventory(startingSlots({ wheat: 1, coal: 1, stone: 1 }));
-  pack.changeGrid(2, 'mill');
-  const slots = pack.snapshot().slots;
-  const wheat = slots.findIndex((slot) => slot?.item === 'wheat');
-  const coal = slots.findIndex((slot) => slot?.item === 'coal');
-  const stone = slots.findIndex((slot) => slot?.item === 'stone');
-  assert.equal(pack.move({ area: 'bag', index: wheat }, { area: 'grid', index: 0 }), true);
-  assert.equal(pack.move({ area: 'bag', index: coal }, { area: 'grid', index: 2 }), true);
-  assert.equal(pack.move({ area: 'bag', index: stone }, { area: 'grid', index: 2 }), false);
-  assert.equal(pack.move({ area: 'bag', index: stone }, { area: 'grid', index: 1 }), false);
+test('a massa devolve o balde vazio', () => {
+  const pack = new Inventory(startingSlots({ flour: 3, waterBucket: 1 }));
+  pack.changeGrid(3, 'workbench');
+  const index = recipes.recipes.findIndex(r => r.output.item === 'dough');
+  const before = pack.count('bucket');
+  assert.equal(pack.fillRecipe(index), true);
+  assert.deepEqual(pack.takeResult(), { item: 'dough', amount: 3 });
+  assert.equal(pack.count('bucket'), before + 1);
+  assert.equal(pack.count('waterBucket'), 0);
+  assert.equal(pack.count('flour'), 0);
 });
 
 test('picaretas podem ser fabricadas novamente quando há materiais suficientes', () => {

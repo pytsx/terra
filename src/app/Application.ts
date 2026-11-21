@@ -346,12 +346,15 @@ export class Application {
     let simulationMs = 0, renderingMs = 0;
     const dt = this.previousTime ? Math.min(0.08, (time - this.previousTime) / 1000) : 0;
     this.previousTime = time;
-    if (!this.panel) {
+    const stationPanel = this.panel === 'inventory' && this.game.stationOpen;
+    const simulate = !this.panel || stationPanel;
+    if (simulate) {
       const simulationStarted = performance.now();
       this.remainder += dt;
       let processBlockFrame = true;
       while (this.remainder >= 1 / 60) {
-        this.game.step(1 / 60, this.input.read(this.aim()), processBlockFrame);
+        const input = this.input.read(this.aim());
+        this.game.step(1 / 60, stationPanel ? { ...input, direction: 0, mine: false, place: false, sprint: false, jump: false, dive: false, ascend: false } : input, processBlockFrame);
         processBlockFrame = false;
         this.remainder -= 1 / 60;
       }
@@ -371,15 +374,16 @@ export class Application {
         if (this.autoSave) void this.save();
       }
     }
-    if (!this.panel || this.repaint) {
+    if (simulate || this.repaint) {
       const renderingStarted = performance.now();
-      this.views.world.draw(this.game.scene(this.aim()), !!this.panel);
+      this.views.world.draw(this.game.scene(this.aim()), !!this.panel && !stationPanel);
       renderingMs = performance.now() - renderingStarted;
       this.repaint = false;
     }
+    if (stationPanel && !this.game.stationOpen) this.setPanel(null);
     this.hudIn -= dt;
     if (this.hudIn <= 0) {
-      if (!this.panel) this.refresh();
+      if (simulate) this.refresh();
       this.hudIn = 0.16;
     }
     this.performance.record(time && this.previousTime ? dt * 1000 : performance.now() - frameStarted,
