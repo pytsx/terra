@@ -40,6 +40,16 @@ export class Hydrology {
     return !this.activeRegion || this.activeRegion.containsColumn(x);
   }
 
+  /** Maximum amount a solid neighbour may absorb during one hydraulic pass. */
+  private porousBudget(block: number, supply: number, quantum = interval) {
+    if (liquid(block)) return supply;
+    const permeability = BLOCKS[block].permeability ?? 0;
+    // Ordinary soil/sand still receives a saturated-strata transfer in one
+    // pass. Only compact rock uses the slow pore-scale path here.
+    if (permeability >= 0.03) return supply;
+    return Math.min(supply, Math.max(0, permeability * full * quantum));
+  }
+
   get processedLastTick() { return this.processed; }
   get aquiferRechargeLastTick() { return this.recharged; }
   get activeFluidCount() { return this.activeFluids.size; }
@@ -292,7 +302,10 @@ export class Hydrology {
       if (!this.activeColumnContains(tx)) continue;
       const target = world.get(tx, ty);
       if (target === B.LAVA) continue;
-      const accepted = this.fill(world, tx, ty, excess);
+      // Saturated strata may conduct excess water, but the receiving solid
+      // still obeys its own permeability. In particular, stone must not
+      // receive a full transfer merely because it touches another stone.
+      const accepted = this.fill(world, tx, ty, this.porousBudget(target, excess));
       excess -= accepted;
       if (dy === 1 && accepted && liquid(target)) this.drips.add(`${tx},${ty}`);
     }
@@ -536,8 +549,12 @@ export class Hydrology {
       liquid(below) ? 2 : BLOCKS[below].permeability ?? 0);
     const moving = free && this.flowing(world, x, y, block);
     const absorption = moving && !liquid(below) ? MOVING_WATER_ABSORPTION : 1;
+    // Preserve fractional requests for very impermeable materials. Rounding
+    // every request up to one unit made compact stone absorb a full unit on
+    // every simulation step, defeating its low permeability.
+    const porousRequest = (amount: number) => amount > 0 && amount < 1 ? amount : Math.ceil(amount);
     const downward = free
-      ? transfer(0, 1, Math.min(mobile, Math.ceil(full * quantum * conductivity * absorption)))
+      ? transfer(0, 1, Math.min(mobile, porousRequest(full * quantum * conductivity * absorption)))
       : 0;
     if (!free && downward > 0 && liquid(below)) this.drips.add(`${x},${y + 1}`);
     const lateral = this.sweepRight ? [1, -1] : [-1, 1];
@@ -546,7 +563,7 @@ export class Hydrology {
         const neighbor = world.peek(x + dx, y);
         if (neighbor === undefined) continue;
         if (!liquid(neighbor)) {
-          transfer(dx, 0, Math.ceil((BLOCKS[neighbor].permeability ?? 0) * full *
+          transfer(dx, 0, porousRequest((BLOCKS[neighbor].permeability ?? 0) * full *
             quantum * 0.25 * (moving ? MOVING_WATER_ABSORPTION : 1)));
           continue;
         }

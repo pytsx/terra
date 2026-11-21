@@ -1,5 +1,8 @@
 export function permeabilityFor(blockKey: string, block: { readonly hardness: number | null }) {
   if (block.hardness === null) return { permeability: 0, waterCapacity: 0 };
+  // Solid stone is a compact rock layer. Direct contact should move only a
+  // trace amount of water over many in-game days, unlike soil and gravel.
+  if (blockKey === 'STONE') return { permeability: 0.00002, waterCapacity: 0.08 };
   if (blockKey === 'LEAF') return { permeability: 0.82, waterCapacity: 0.02 };
   if (blockKey === 'GRAVEL') return { permeability: 2.4, waterCapacity: 2 };
   if (blockKey === 'SAND') return { permeability: 0.65, waterCapacity: 0.35 };

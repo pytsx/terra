@@ -45,6 +45,29 @@ test('permeabilidade segue a dureza e folhas retêm quase nenhuma chuva', () => 
   assert.ok(Math.min(...rock) > 0);
 });
 
+test('pedra compacta leva dias para absorver água em contato direto', () => {
+  const world = basin(B.STONE);
+  world.hydrology.restore([[1, 9, 900]]);
+  const initial = world.waterAt(1, 9);
+  for (let tick = 0; tick < 120; tick++) world.hydrology.step(0.5, world, 1, 9, 0, 0);
+  const absorbed = world.waterAt(1, 10);
+  assert.ok(absorbed > 0, 'pedra deve absorver um traço mínimo');
+  assert.ok(absorbed < 0.01, `pedra absorveu água demais: ${absorbed}`);
+  assert.ok(world.waterAt(1, 9) > initial - 0.01);
+});
+
+test('pedras adjacentes não bypassam a permeabilidade ao propagar excedente', () => {
+  const world = new World('PEDRA-ADJACENTE');
+  for (let y = 0; y <= 12; y++) {
+    world.set(0, y, B.BEDROCK, false);
+    world.set(1, y, y === 12 ? B.BEDROCK : y >= 10 ? B.STONE : B.AIR, false);
+    world.set(2, y, B.BEDROCK, false);
+  }
+  world.hydrology.restore([[1, 9, 900]]);
+  for (let tick = 0; tick < 240; tick++) world.hydrology.step(0.5, world, 1, 9, 0, 0);
+  assert.ok(world.waterAt(1, 11) < 0.01, `a segunda pedra recebeu água demais: ${world.waterAt(1, 11)}`);
+});
+
 test('gravel concentra água vizinha, drena para baixo e armazena dois blocos de volume', () => {
   const gravel = BLOCKS[B.GRAVEL];
   assert.equal(gravel.waterCapacity, 2);
