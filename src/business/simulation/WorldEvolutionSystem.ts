@@ -158,11 +158,25 @@ export class WorldEvolutionSystem {
       this.scannedCells.delete(this.chunkKey(cx, cy, partition));
   }
 
+  /** Releases discovery indexes for an evicted column. Durable temporal state
+   * remains in TransformationState and resumes when the column is revisited. */
+  releaseColumn(cx: number) {
+    const prefix = `${cx},`;
+    for (const key of this.scannedCells.keys()) if (key.startsWith(prefix)) this.scannedCells.delete(key);
+    for (const key of this.candidatesByChunk.keys()) if (key.startsWith(prefix)) this.candidatesByChunk.delete(key);
+  }
+
   save() { return this.state.save(); }
   restore(records: readonly TransformationStateRecord[]) {
     this.state.restore(records, id => this.registry.has(id));
   }
   get trackedCells() { return this.state.size; }
+  get stats() {
+    let candidates = 0;
+    for (const bucket of this.candidatesByChunk.values()) candidates += bucket.size;
+    return { transformations: this.state.size, evolutionCandidates: candidates,
+      evolutionIndexedPartitions: this.scannedCells.size };
+  }
 
   private addCandidate(x: number, y: number, partition: number) {
     const cx = Math.floor(x / CHUNK_WIDTH), cy = Math.floor(y / CHUNK_HEIGHT);

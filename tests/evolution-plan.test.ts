@@ -4,6 +4,9 @@ import { ChunkStore } from '../src/business/world/ChunkStore';
 import type { TerrainColumn } from '../src/business/worldgen/TerrainColumn';
 import { EntityRegistry } from '../src/business/entities/EntityRegistry';
 import { PerformanceMonitor } from '../src/app/PerformanceMonitor';
+import { RegionalEntityStore } from '../src/business/entities/RegionalEntityStore';
+import { SimulationRegion } from '../src/business/simulation/SimulationRegion';
+import { CHUNK_WIDTH, TILE } from '../src/business/catalog';
 
 test('ChunkStore materializa seções sob demanda e atualiza o LRU ao consultar uma coluna', () => {
   const generated: string[] = [], evicted: number[] = [];
@@ -43,4 +46,20 @@ test('métricas mantêm janela limitada e calculam P95 e custo por sistema', () 
     systems: { simulation: 6, rendering: 7 },
     samples: 3,
   });
+});
+
+test('entidades fora da região ativa são suspensas e reidratadas com o mesmo estado', () => {
+  const near = EntityRegistry.create('cow', 0, 24 * TILE, 11, true)!;
+  const far = EntityRegistry.create('wolf', CHUNK_WIDTH * 4 * TILE, 24 * TILE, 12)!;
+  far.hit(-1, 2);
+  const farSave = EntityRegistry.save(far);
+  const store = new RegionalEntityStore(undefined, [EntityRegistry.save(near), farSave]);
+  const nearRegion = SimulationRegion.around({ x: 0, y: 24 * TILE, w: 1, h: 1 });
+  assert.deepEqual(store.activate(nearRegion).map(entity => entity.view().kind), ['cow']);
+  assert.equal(store.stats.sleepingRegionEntities, 1);
+  const farRegion = SimulationRegion.around({ x: CHUNK_WIDTH * 4 * TILE, y: 24 * TILE, w: 1, h: 1 });
+  const awakened = store.activate(farRegion);
+  assert.deepEqual(awakened.map(entity => entity.view().kind), ['wolf']);
+  assert.equal(EntityRegistry.save(awakened[0]).health, farSave.health);
+  assert.equal(store.stats.sleepingRegionEntities, 1);
 });

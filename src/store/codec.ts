@@ -1,6 +1,6 @@
 import { ARMOR_SLOTS, BLOCKS, ITEMS, BELT_SIZE, TILE, WORLD_H, WORLD_W, type Slot } from '../business/catalog';
 import { startingSlots } from '../business/inventory/Inventory';
-import type { BlockDamage, DroppedSave, EntitySave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
+import type { BlockDamage, DroppedSave, EntityRegionSave, EntitySave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
 import { EntityRegistry } from '../business/entities/EntityRegistry';
 import { clamp } from '../shared/math';
 function object(value: unknown): Record<string, unknown> {
@@ -216,7 +216,16 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
   }
   const rawNaturalCells: unknown[] = Array.isArray(data.naturalCells) ? data.naturalCells :
     Array.isArray(data.ecologicalSoil) ? data.ecologicalSoil : [];
-  const entities = Array.isArray(data.entities)
+  const entityRegions: EntityRegionSave[] | undefined = Array.isArray(data.entityRegions)
+    ? data.entityRegions.slice(0, 512).flatMap((entry): EntityRegionSave[] => {
+      if (!Array.isArray(entry) || entry.length !== 3 || !Number.isSafeInteger(entry[0]) ||
+        !Number.isSafeInteger(entry[1]) || entry[1] < 0 || entry[1] >= Math.ceil(WORLD_H / 32) ||
+        !Array.isArray(entry[2])) return [];
+      const decoded = entry[2].slice(0, 256).map(value => decodeEntity(value, infinite))
+        .filter((value): value is EntitySave => !!value);
+      return decoded.length ? [[entry[0], entry[1], decoded]] : [];
+    }) : undefined;
+  const entities = entityRegions === undefined && Array.isArray(data.entities)
     ? data.entities.slice(0, 256).map(value => decodeEntity(value, infinite)).filter((value): value is EntitySave => !!value)
     : undefined;
   return {
@@ -257,5 +266,6 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
     placementMode: data.placementMode === 'free' ? 'free' : 'approach',
     drops,
     entities,
+    entityRegions,
   };
 }

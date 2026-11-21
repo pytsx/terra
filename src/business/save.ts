@@ -29,6 +29,7 @@ export interface EntitySave {
   breeding?: { stage: 'calf' | 'adult' | 'courting' | 'recovering'; remaining: number };
   data?: Record<string, number | string | boolean | null>;
 }
+export type EntityRegionSave = [regionX: number, regionY: number, entities: EntitySave[]];
 export interface ExpeditionSave {
   version: 4;
   generationVersion?: number;
@@ -54,6 +55,7 @@ export interface ExpeditionSave {
   drops?: DroppedSave[];
   /** Persistent population. Missing in legacy v4 saves. */
   entities?: EntitySave[];
+  entityRegions?: EntityRegionSave[];
 }
 // O domínio define o contrato. Adaptadores são escolhidos na composição do jogo.
 export interface SaveRepository {

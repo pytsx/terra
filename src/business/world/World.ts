@@ -195,6 +195,7 @@ export class World {
       cx => new TerrainColumn(this.h, cx, this.height, this.spawnX, this.generationVersion),
       (cx, cy, cells) => this.restoreSection(cx, cy, cells),
       cx => {
+        this.evolution.releaseColumn(cx);
         for (let x = cx * CHUNK_WIDTH; x < (cx + 1) * CHUNK_WIDTH; x++) this.hydrology.terrainChanged(x);
       },
     );
@@ -434,7 +435,7 @@ export class World {
 
   get blockUpdateStats() {
     return { ...this.blockUpdates.stats, priorityFluids: this.hydrology.activeFluidCount,
-      transformations: this.evolution.trackedCells };
+      ...this.evolution.stats, ...this.chunks.stats };
   }
   solid(x: number, y: number) {
     const block = this.get(x, y);

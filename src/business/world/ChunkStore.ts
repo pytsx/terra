@@ -9,6 +9,8 @@ const MAX_COLUMNS = 64;
 
 export class ChunkStore {
   private readonly columns = new Map<number, Chunk>();
+  private sectionLoads = 0;
+  private evictionCount = 0;
 
   constructor(
     private readonly sectionCount: number,
@@ -27,6 +29,7 @@ export class ChunkStore {
       if (this.columns.size > MAX_COLUMNS) {
         const oldest = this.columns.keys().next().value!;
         this.columns.delete(oldest);
+        this.evictionCount++;
         this.evicted(oldest);
       }
     } else {
@@ -49,6 +52,7 @@ export class ChunkStore {
     let cells = column.sections.get(cy);
     if (!cells) {
       cells = column.terrain.generate(cy);
+      this.sectionLoads++;
       this.restoreSection(cx, cy, cells);
       column.sections.set(cy, cells);
     }
@@ -57,5 +61,11 @@ export class ChunkStore {
 
   materializedColumns() {
     return [...this.columns].filter(([, chunk]) => chunk.sections.size > 0).map(([cx]) => cx);
+  }
+  get stats() {
+    let sections = 0;
+    for (const chunk of this.columns.values()) sections += chunk.sections.size;
+    return { loadedColumns: this.columns.size, materializedSections: sections,
+      sectionLoads: this.sectionLoads, chunkEvictions: this.evictionCount };
   }
 }

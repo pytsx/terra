@@ -15,6 +15,7 @@ import {
 import { World, type TerrainView } from './world/World';
 import { Explorer, type Movement } from './entities/Explorer';
 import { EntityRegistry, type EngineEntity } from './entities/EntityRegistry';
+import { RegionalEntityStore } from './entities/RegionalEntityStore';
 import { Inventory } from './inventory/Inventory';
 import { RNG, clamp } from '../shared/math';
 import type { ExpeditionSave } from './save';
@@ -102,6 +103,7 @@ export class Expedition {
   private weatherUntil = 0;
   private raining = false;
   private readonly entityUpdates = new EntityUpdateGroup<EngineEntity>();
+  private readonly entityRegions: RegionalEntityStore;
   private activeEntityCount = 0;
   private swing: { item: string; angle: number; started: number; duration: number } | null = null;
 
@@ -120,6 +122,7 @@ export class Expedition {
       this.terrain.restoreDamage(save.damage ?? []);
     }
     this.explorer = new Explorer(this.terrain, save?.player);
+    this.entityRegions = new RegionalEntityStore(save?.entityRegions, save?.entities);
     this.commands = registerPlacementCommand(registerWeatherCommand(
       new CommandBus<WeatherCommandContext & PlacementCommandContext>(this),
     ));
@@ -139,12 +142,10 @@ export class Expedition {
     this.weatherUntil = save?.weatherUntil ?? (this.weatherMode === 'natural' ? 0 : this.elapsed + 75);
     if (save?.weatherUntil === undefined && this.weatherMode === 'natural' && this.raining)
       this.commands.dispatch(new SetWeatherCommand('rain', 'system'));
-    if (save?.entities) this.mobs = save.entities
-      .map(entity => EntityRegistry.restore(entity))
-      .filter((entity): entity is EngineEntity => !!entity && !entity.dead);
+    this.mobs = this.entityRegions.activate(SimulationRegion.around(this.player));
     this.registerTerminalActions();
     // Legacy saves have no entity payload and retain the old population bootstrap.
-    if (!save?.entities) this.spawn();
+    if (!save?.entityRegions && !save?.entities) this.spawn();
   }
   private registerTerminalActions() {
     const none = (args: readonly string[]): [] => {
@@ -389,7 +390,10 @@ export class Expedition {
         }
         if (selected) {
           const entity = EntityRegistry.create(selected, x * TILE, y * TILE, this.rng.int(0, 9999));
-          if (entity) this.mobs.push(entity);
+          if (entity) {
+            this.entityRegions.add(entity);
+            this.mobs.push(entity);
+          }
         }
       }
     }
@@ -589,6 +593,7 @@ export class Expedition {
     if (placePressed) this.commands.run(this.actions.build(controls.aim));
     const p = this.player;
     const region = SimulationRegion.around(p);
+    this.mobs = this.entityRegions.activate(region);
     const activeMobs = this.entityUpdates.select(this.mobs, region);
     this.activeEntityCount = activeMobs.length;
     const sunPhase = (this.elapsed / GAME_DAY_SECONDS + 0.18) % 1;
@@ -644,22 +649,23 @@ export class Expedition {
         if (Math.hypot(a.x - b.x, a.y - b.y) > asset.config.breeding.mateRadius) continue;
         const calf = this.commands.run(this.actions.breed(aEntity, bEntity));
         if (calf) {
+          this.entityRegions.add(calf);
           this.mobs.push(calf);
           this.events.push({ type: 'message', text: 'Uma nova bezerra nasceu.' });
         }
       }
     }
-    this.mobs = this.mobs.filter((m) => !m.dead);
+    this.mobs = this.entityRegions.commit(region);
     this.spawnIn -= dt;
     if (this.spawnIn <= 0) {
       this.spawnIn = 17;
-      this.mobs = this.mobs.filter(m => m.mate || Math.abs(m.view().x - p.x) < TILE * 90);
       if (this.mobs.length < 9) this.spawn();
     }
   }
   get simulationStats() {
     return {
       activeEntities: this.activeEntityCount,
+      ...this.entityRegions.stats,
       ...this.terrain.blockUpdateStats,
     };
   }
@@ -733,7 +739,7 @@ export class Expedition {
       zoom: this.zoom,
       placementMode: this.placementMode,
       drops: this.drops.save(),
-      entities: this.mobs.filter(entity => !entity.dead).map(entity => EntityRegistry.save(entity)),
+      entityRegions: this.entityRegions.save(),
     };
   }
 }
