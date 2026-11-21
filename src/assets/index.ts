@@ -132,6 +132,13 @@ import item_saplingConfig from './items/sapling/config.json';
 import item_saplingScript from './items/sapling';
 
 const blocks = {
+  FARMLAND: { config: { ...block_dirtConfig, id: 22, name: 'Solo preparado', color: '#63462c' }, script: block_dirtScript },
+  WHEAT_SHOOT: { config: { ...block_saplingConfig, id: 23, name: 'Trigo jovem', drop: 'wheatSeed' }, script: block_saplingScript },
+  RIPE_WHEAT: { config: { ...block_saplingConfig, id: 24, name: 'Trigo maduro', drop: 'wheat' }, script: {
+    ...block_saplingScript, placed: { render(c: CanvasRenderingContext2D) {
+      for (const x of [5, 11, 17]) { c.fillStyle = '#ad863c'; c.fillRect(x, 6, 2, 18);
+        c.fillStyle = '#e5be61'; c.fillRect(x - 2, 3, 5, 9); }
+    } } } },
   "AIR": { config: block_airConfig, script: block_airScript },
   "BEDROCK": { config: block_bedrockConfig, script: block_bedrockScript },
   "BRICK": { config: block_brickConfig, script: block_brickScript },
@@ -162,6 +169,9 @@ for (const [key, asset] of Object.entries(blocks)) {
 export const modularBlocks = immutable(blocks);
 
 export const modularItems = immutable({
+  wheatSeed: { config: { ...item_saplingConfig, name: 'Sementes de trigo', block: 'WHEAT_SHOOT' }, script: item_saplingScript },
+  bucket: { config: { name: 'Balde vazio', kind: 'item', unique: false, color: '#9aabba' }, script: item_saplingScript },
+  waterBucket: { config: { name: 'Balde com água', kind: 'item', unique: false, color: '#488cd6' }, script: item_saplingScript },
   "brick": { config: item_brickConfig, script: item_brickScript },
   "coal": { config: item_coalConfig, script: item_coalScript },
   "copper": { config: item_copperConfig, script: item_copperScript },

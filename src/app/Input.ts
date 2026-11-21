@@ -10,15 +10,20 @@ export class Input {
   constructor(
     canvas: HTMLCanvasElement,
     private readonly enabled: () => boolean,
+    private readonly consume: () => boolean,
     private readonly interact: () => boolean,
   ) {
     canvas.addEventListener('pointermove', (e) => this.point(e, canvas));
     canvas.addEventListener('pointerdown', (e) => {
       if (!this.enabled()) return;
       this.point(e, canvas);
-      if (e.button === 2 && this.interact()) {
-        e.preventDefault();
-        return;
+      if (e.button === 2) {
+        // Consumables take precedence over contextual interaction/placement.
+        // A non-consumable keeps the normal right-click behavior.
+        if (this.consume() || this.interact()) {
+          e.preventDefault();
+          return;
+        }
       }
       canvas.focus();
       canvas.setPointerCapture(e.pointerId);

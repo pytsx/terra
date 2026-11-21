@@ -121,5 +121,9 @@
     "station": "workbench",
     "pattern": [["leather", null, "leather"], ["leather", null, "leather"]],
     "output": { "item": "leatherBoots", "amount": 1 }
+  },
+  {
+    "pattern": [["iron", null, "iron"], [null, "iron", null]],
+    "output": { "item": "bucket", "amount": 1 }
   }
 ]

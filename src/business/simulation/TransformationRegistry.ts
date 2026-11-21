@@ -19,7 +19,7 @@ export interface TransformationRule {
   readonly action: EvolutionAction;
 }
 
-const properties = new Set(['water.volume', 'water.capacity', 'water.saturation', 'environment.exposedToSky']);
+const properties = new Set(['water.volume', 'water.capacity', 'water.saturation', 'environment.exposedToSky', 'soil.moisture']);
 const operators = new Set(['==', '!=', '>', '>=', '<', '<=']);
 
 function validateCondition(condition: TransformationCondition, id: string): void {

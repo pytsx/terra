@@ -1,5 +1,5 @@
 import { InventoryControls } from './InventoryControls';
-import { GameService, BELT_SIZE, TILE } from '../business';
+import { GameService, BELT_SIZE, ITEMS, TILE } from '../business';
 import { buildBagModel } from './BagModel';
 import { createViews, element, type Views } from '../render';
 import { Input } from './Input';
@@ -10,6 +10,13 @@ export class Application {
   private readonly input = new Input(
     this.views.canvas,
     () => !this.panel && !this.terminalOpen,
+    () => {
+      const held = this.game.inventory.slots[this.game.slot];
+      if (!held || !ITEMS[held.item].use) return false;
+      const consumed = this.game.consumeSelected();
+      if (consumed) this.refresh();
+      return consumed;
+    },
     () => {
       if (this.game.interactEntity(this.aim())) {
         this.refresh();

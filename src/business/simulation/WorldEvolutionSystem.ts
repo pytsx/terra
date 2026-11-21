@@ -1,7 +1,7 @@
 import { hashText, mixHash } from '../../shared/math';
 import type { World } from '../world/World';
 import { featureGenerator } from '../worldgen/FeatureGenerator';
-import { CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
+import { B, CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
 import { blockPartitionAt } from './BlockPartitionScheduler';
 import type { SimulationRegion } from './SimulationRegion';
 import { TransformationEvaluator } from './TransformationEvaluator';
@@ -100,6 +100,8 @@ export class WorldEvolutionSystem {
       }
       const previous = this.state.get(x, y, rule.id);
       const evaluation = this.evaluator.evaluate(rule, {
+        soilMoisture: block === B.WHEAT_SHOOT && world.peek(x, y + 1) === B.FARMLAND
+          ? world.waterStateAt(x, y + 1).saturation : 0,
         water: world.waterStateAt(x, y, block),
         environment: { exposedToSky: world.exposedToSky(x, y) },
       }, previous, dt);

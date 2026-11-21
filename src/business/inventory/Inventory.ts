@@ -17,6 +17,12 @@ function compatible(a: Readonly<Stack>, b: Readonly<Stack>) {
   return a.item === b.item && stackable(a);
 }
 function store(slots: Slot[], stack: Stack) {
+  // Durable gear represents an individual instance. It never carries a stack
+  // quantity, even when a legacy save or an external drop supplies one.
+  if (!stackable(stack) && stack.amount > 1) {
+    for (let amount = 0; amount < stack.amount; amount++) store(slots, { ...stack, amount: 1 });
+    return;
+  }
   const existing = slots.find(
     (s) => s && compatible(s, stack) && Number.isSafeInteger(s.amount + stack.amount),
   );
@@ -54,6 +60,13 @@ export class Inventory {
   private cursorOrigin: SlotRef | null = null;
   constructor(slots: readonly Slot[] = startingSlots(), equipment: readonly Slot[] = empty(4)) {
     this.slots = clone(slots);
+    // Migrate malformed old stacks of tools/armor into individual slots.
+    for (let index = 0; index < this.slots.length; index++) {
+      const stack = this.slots[index];
+      if (!stack || stackable(stack) || stack.amount <= 1) continue;
+      this.slots[index] = { ...stack, amount: 1 };
+      for (let amount = 1; amount < stack.amount; amount++) store(this.slots, { ...stack, amount: 1 });
+    }
     this.equipment = clone(equipment).slice(0, ARMOR_SLOTS.length);
     while (this.equipment.length < ARMOR_SLOTS.length) this.equipment.push(null);
   }
@@ -78,6 +91,12 @@ export class Inventory {
     const stack = createStack(item, amount);
     if (durability !== undefined && stack.durability !== undefined) stack.durability = durability;
     store(this.slots, stack);
+  }
+  exchangeOne(index: number, replacement: string) {
+    const held = this.slots[index];
+    if (!held) return;
+    if (held.amount === 1) this.slots[index] = createStack(replacement, 1);
+    else { held.amount--; this.collect(replacement); }
   }
   use(item: string, preferred?: number) {
     const index = preferred ?? this.slots.findIndex((s) => s?.item === item);
@@ -241,6 +260,12 @@ export class Inventory {
         ? { ...target, amount: target.amount + result.amount }
         : createStack(result.item, result.amount);
     } else {
+      // Crafted resources extend an existing inventory stack before consuming a
+      // new slot. Gear is deliberately incompatible and remains individual.
+      const existing = this.slots.find((slot) => slot && compatible(slot, result));
+      if (existing && Number.isSafeInteger(existing.amount + result.amount)) {
+        existing.amount += result.amount;
+      } else {
       let destination = this.slots.findIndex((slot, index) => index < BELT_SIZE && !slot);
       if (destination < 0) destination = this.slots.findIndex((slot, index) => index >= BELT_SIZE && !slot);
       if (destination >= 0) this.slots[destination] = createStack(result.item, result.amount);
@@ -251,6 +276,7 @@ export class Inventory {
       else if (compatible(this.cursor, result) && Number.isSafeInteger(this.cursor.amount + result.amount))
         this.cursor.amount += result.amount;
       else return null;
+      }
     }
     this.grid.forEach((s, i) => {
       if (s && --s.amount === 0) this.grid[i] = null;

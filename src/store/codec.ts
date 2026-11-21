@@ -217,16 +217,16 @@ export function decodeSave(raw: string, legacyZoom: number): ExpeditionSave {
   const rawNaturalCells: unknown[] = Array.isArray(data.naturalCells) ? data.naturalCells :
     Array.isArray(data.ecologicalSoil) ? data.ecologicalSoil : [];
   const entityRegions: EntityRegionSave[] | undefined = Array.isArray(data.entityRegions)
-    ? data.entityRegions.slice(0, 512).flatMap((entry): EntityRegionSave[] => {
+    ? data.entityRegions.flatMap((entry): EntityRegionSave[] => {
       if (!Array.isArray(entry) || entry.length !== 3 || !Number.isSafeInteger(entry[0]) ||
         !Number.isSafeInteger(entry[1]) || entry[1] < 0 || entry[1] >= Math.ceil(WORLD_H / 32) ||
         !Array.isArray(entry[2])) return [];
-      const decoded = entry[2].slice(0, 256).map(value => decodeEntity(value, infinite))
+      const decoded = entry[2].map(value => decodeEntity(value, infinite))
         .filter((value): value is EntitySave => !!value);
       return decoded.length ? [[entry[0], entry[1], decoded]] : [];
     }) : undefined;
   const entities = entityRegions === undefined && Array.isArray(data.entities)
-    ? data.entities.slice(0, 256).map(value => decodeEntity(value, infinite)).filter((value): value is EntitySave => !!value)
+    ? data.entities.map(value => decodeEntity(value, infinite)).filter((value): value is EntitySave => !!value)
     : undefined;
   return {
     version: 4,

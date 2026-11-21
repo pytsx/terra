@@ -89,6 +89,31 @@ test('clicar no resultado prioriza barra, depois mochila e por fim o cursor', ()
   assert.equal(withoutSpace.snapshot().cursor?.item, 'workbench');
   assert.equal(withoutSpace.snapshot().slots[BELT_SIZE]?.item, 'plank');
 });
+test('resultado do craft completa uma stack existente antes de abrir novo slot', () => {
+  const slots = Array.from({ length: BELT_SIZE * 4 }, (): Slot => null);
+  // The wood recipe outputs six planks; keep an existing plank stack elsewhere.
+  slots[0] = { item: 'plank', amount: 3 };
+  slots[BELT_SIZE] = { item: 'wood', amount: 2 };
+  const inventory = new Inventory(slots);
+  assert.ok(inventory.move(bag(BELT_SIZE), grid(0)));
+  assert.ok(inventory.move(bag(BELT_SIZE), grid(1)));
+  assert.deepEqual(inventory.takeResult(), { item: 'plank', amount: 6 });
+  assert.deepEqual(inventory.at(0), { item: 'plank', amount: 9 });
+  assert.equal(inventory.snapshot().slots.filter(slot => slot?.item === 'plank').length, 1);
+});
+
+test('ferramentas e armaduras sempre ocupam slots individuais', () => {
+  const slots = Array.from({ length: BELT_SIZE * 4 }, (): Slot => null);
+  slots[0] = { item: 'pickaxe', amount: 2, durability: 96 };
+  slots[1] = { item: 'leatherHelmet', amount: 2, durability: 80 };
+  const inventory = new Inventory(slots);
+  const picks = inventory.snapshot().slots.filter(slot => slot?.item === 'pickaxe');
+  const helmets = inventory.snapshot().slots.filter(slot => slot?.item === 'leatherHelmet');
+  assert.deepEqual(picks.map(slot => slot?.amount), [1, 1]);
+  assert.deepEqual(helmets.map(slot => slot?.amount), [1, 1]);
+  inventory.collect('pickaxe', 2, 50);
+  assert.equal(inventory.snapshot().slots.filter(slot => slot?.item === 'pickaxe').length, 4);
+});
 test('prévia distribui múltiplos slots sem alterar o item no cursor', () => {
   const pack = new Inventory(startingSlots({ wood: 13 }));
   const source = { area: 'bag' as const, index: 3 };

@@ -239,6 +239,14 @@ export class Hydrology {
     this.write(x, y, block, retained + excess);
   }
 
+  transferBucket(x: number, y: number, block: number, pour: boolean) {
+    const dose = 200;
+    const current = this.amount(x, y, block);
+    if (block === B.LAVA || (pour ? capacity(block) - current < dose : !liquid(block) || current < dose)) return false;
+    this.write(x, y, block, current + (pour ? dose : -dose));
+    return true;
+  }
+
   private fill(world: World, x: number, y: number, supply: number) {
     if (!world.inside(x, y) || !this.activeColumnContains(x)) return 0;
     const block = world.get(x, y), current = this.amount(x, y, block);

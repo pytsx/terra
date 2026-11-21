@@ -7,6 +7,7 @@ import { PerformanceMonitor } from '../src/app/PerformanceMonitor';
 import { RegionalEntityStore } from '../src/business/entities/RegionalEntityStore';
 import { SimulationRegion } from '../src/business/simulation/SimulationRegion';
 import { CHUNK_WIDTH, TILE } from '../src/business/catalog';
+import { decodeSave } from '../src/store/codec';
 
 test('ChunkStore materializa seções sob demanda e atualiza o LRU ao consultar uma coluna', () => {
   const generated: string[] = [], evicted: number[] = [];
@@ -62,4 +63,33 @@ test('entidades fora da região ativa são suspensas e reidratadas com o mesmo e
   assert.deepEqual(awakened.map(entity => entity.view().kind), ['wolf']);
   assert.equal(EntityRegistry.save(awakened[0]).health, farSave.health);
   assert.equal(store.stats.sleepingRegionEntities, 1);
+});
+
+test('ativação estável preserva instâncias ativas sem tocar regiões históricas', () => {
+  const entity = EntityRegistry.create('cow', 0, 24 * TILE, 3)!;
+  const historical = Array.from({ length: 600 }, (_, x) => [x + 20, 0, [
+    { ...EntityRegistry.save(entity), id: `hist-${x}` },
+  ]] as const);
+  const store = new RegionalEntityStore(historical);
+  const region = SimulationRegion.around({ x: 0, y: 24 * TILE, w: 1, h: 1 });
+  store.add(entity);
+  const first = store.activate(region);
+  const second = store.activate(region);
+  assert.equal(first[0], second[0]);
+  assert.equal(store.stats.entityRegions, 601);
+  assert.equal(store.stats.activeEntityRegions, 1);
+  assert.equal(store.stats.sleepingRegionEntities, 600);
+});
+
+test('codec preserva todas as regiões e entidades válidas sem truncamento silencioso', () => {
+  const prototype = EntityRegistry.save(EntityRegistry.create('cow', 120, 240, 9)!);
+  const entityRegions = Array.from({ length: 513 }, (_, region) => [region, 0, [
+    ...Array.from({ length: 257 }, (_, entity) => ({ ...prototype, id: `entity-${region}-${entity}` })),
+  ]]);
+  const save = decodeSave(JSON.stringify({
+    version: 4, seed: 'SEM-TRUNCAMENTO', edits: [], slots: Array(36).fill(null),
+    player: { x: 0, y: 0, life: 5 }, entityRegions,
+  }), 1);
+  assert.equal(save.entityRegions?.length, 513);
+  assert.equal(save.entityRegions?.at(-1)?.[2].length, 257);
 });

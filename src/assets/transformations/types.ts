@@ -1,4 +1,5 @@
 export type TransformationProperty =
+  | 'soil.moisture'
   | 'water.volume'
   | 'water.capacity'
   | 'water.saturation'

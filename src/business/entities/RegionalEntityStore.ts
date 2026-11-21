@@ -12,6 +12,9 @@ interface RegionBucket {
  * current simulation region. Sleeping regions retain compact serializable data. */
 export class RegionalEntityStore {
   private readonly regions = new Map<string, RegionBucket>();
+  /** Only these keys contain hydrated runtime entities. Historical regions are
+   * intentionally never walked during an ordinary simulation tick. */
+  private readonly activeKeys = new Set<string>();
 
   constructor(regions?: readonly EntityRegionSave[], legacy: readonly EntitySave[] = []) {
     if (regions !== undefined) {
@@ -27,10 +30,20 @@ export class RegionalEntityStore {
   activate(region: SimulationRegion) {
     this.reindexActive();
     const desired = this.keysFor(region);
-    for (const [key, bucket] of this.regions) {
-      if (desired.has(key)) this.wake(bucket);
-      else this.sleep(bucket);
-      if (!bucket.active.length && !bucket.sleeping.length) this.regions.delete(key);
+    // Suspend only regions that were active last tick and are no longer needed.
+    for (const key of [...this.activeKeys]) {
+      if (desired.has(key)) continue;
+      const bucket = this.regions.get(key);
+      if (bucket) this.sleep(bucket);
+      this.activeKeys.delete(key);
+      if (bucket && !bucket.sleeping.length) this.regions.delete(key);
+    }
+    // Hydrate only newly entered regions; no scan over explored history.
+    for (const key of desired) {
+      const bucket = this.regions.get(key);
+      if (!bucket) continue;
+      if (!this.activeKeys.has(key)) this.wake(bucket);
+      if (bucket.active.length) this.activeKeys.add(key);
     }
     const active: EngineEntity[] = [];
     for (const key of desired) {
@@ -41,7 +54,10 @@ export class RegionalEntityStore {
   }
 
   commit(region: SimulationRegion) {
-    for (const bucket of this.regions.values()) bucket.active = bucket.active.filter(entity => !entity.dead);
+    for (const key of this.activeKeys) {
+      const bucket = this.regions.get(key);
+      if (bucket) bucket.active = bucket.active.filter(entity => !entity.dead);
+    }
     return this.activate(region);
   }
 
@@ -49,6 +65,7 @@ export class RegionalEntityStore {
     const [rx, ry] = this.regionOf(entity);
     const active = this.bucket(rx, ry).active;
     if (!active.includes(entity)) active.push(entity);
+    this.activeKeys.add(this.key(rx, ry));
   }
 
   save(): EntityRegionSave[] {
@@ -64,13 +81,12 @@ export class RegionalEntityStore {
   }
 
   get stats() {
-    let activeRegions = 0, activeEntities = 0, sleepingEntities = 0;
+    let activeEntities = 0, sleepingEntities = 0;
+    for (const key of this.activeKeys) activeEntities += this.regions.get(key)?.active.length ?? 0;
     for (const bucket of this.regions.values()) {
-      if (bucket.active.length) activeRegions++;
-      activeEntities += bucket.active.length;
       sleepingEntities += bucket.sleeping.length;
     }
-    return { entityRegions: this.regions.size, activeEntityRegions: activeRegions,
+    return { entityRegions: this.regions.size, activeEntityRegions: this.activeKeys.size,
       activeRegionEntities: activeEntities, sleepingRegionEntities: sleepingEntities };
   }
 
@@ -90,20 +106,21 @@ export class RegionalEntityStore {
   }
 
   private reindexActive() {
-    const moves: [EngineEntity, string][] = [];
-    for (const [key, bucket] of this.regions)
-      for (const entity of bucket.active)
-        if (!entity.dead) {
-          const [rx, ry] = this.regionOf(entity), target = this.key(rx, ry);
-          if (target !== key) moves.push([entity, target]);
+    for (const key of [...this.activeKeys]) {
+      const bucket = this.regions.get(key);
+      if (!bucket) { this.activeKeys.delete(key); continue; }
+      const retained: EngineEntity[] = [];
+      for (const entity of bucket.active) {
+        if (entity.dead) continue;
+        const [rx, ry] = this.regionOf(entity), target = this.key(rx, ry);
+        if (target === key) retained.push(entity);
+        else {
+          this.bucket(rx, ry).active.push(entity);
+          this.activeKeys.add(target);
         }
-    for (const [entity, target] of moves) {
-      for (const bucket of this.regions.values()) {
-        const index = bucket.active.indexOf(entity);
-        if (index >= 0) { bucket.active.splice(index, 1); break; }
       }
-      const [rx, ry] = this.coords(target);
-      this.bucket(rx, ry).active.push(entity);
+      bucket.active = retained;
+      if (!retained.length) this.activeKeys.delete(key);
     }
   }
 
