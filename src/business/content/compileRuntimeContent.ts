@@ -12,13 +12,13 @@ export interface SimulationDefinitions extends ProductionDefinitions {
 
 /** Compile mutable authoring inputs into a snapshot owned by this simulation. */
 export function compileRuntimeContent(source: SimulationDefinitions,
-  services: Pick<RuntimeContent, 'entities' | 'generation' | 'biomeRain' | 'structures'>): RuntimeContent {
+  services: Pick<RuntimeContent, 'materials' | 'entities' | 'generation' | 'biomeRain' | 'structures'>): RuntimeContent {
   const snapshot = structuredClone(source);
   immutable(snapshot);
-  const { stationRegistry, processingRecipes, fuels } = compileProduction(snapshot);
+  const { stationRegistry, processingRecipes, fuels } = compileProduction(snapshot, services.materials);
   return bindRuntimeContent({
     ...services,
     stations: stationRegistry, processes: processingRecipes, fuels,
-    recipes: new RecipeBook(snapshot.recipes), transformations: new TransformationRegistry(snapshot.transformations, services.structures),
+    recipes: new RecipeBook(snapshot.recipes, services.materials), transformations: new TransformationRegistry(snapshot.transformations, services.structures, services.materials),
   });
 }

@@ -1,8 +1,9 @@
-import { BLOCKS, BLOCK_SCRIPTS, TILE } from '../business';
+import type { RuntimeContent } from '../business/content/RuntimeContent';
+import { TILE } from '../business';
 export class Atlas {
   private readonly tiles = new Map<number, HTMLCanvasElement[]>();
-  constructor() {
-    for (const block of Object.values(BLOCKS)) {
+  constructor(readonly content: RuntimeContent) {
+    for (const block of Object.values(content.materials.blocks)) {
       this.tiles.set(
         block.id,
         Array.from({ length: 4 }, (_, variant) => this.makeTile(block.id, variant)),
@@ -14,7 +15,7 @@ export class Atlas {
     tile.width = tile.height = TILE;
     const c = tile.getContext('2d')!;
     c.imageSmoothingEnabled = false;
-    BLOCK_SCRIPTS[id].placed.render(c, variant);
+    this.content.materials.blockScripts[id].placed.render(c, variant);
     return tile;
   }
   tile(c: CanvasRenderingContext2D, id: number, x: number, y: number, variant = 0) {

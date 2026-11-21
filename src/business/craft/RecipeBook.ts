@@ -1,5 +1,6 @@
+import { installedMaterials } from '../content/Materials';
 import { production } from '../../assets/production';
-import { ITEMS, type Stack, type Slot } from '../catalog';
+import { type Stack, type Slot } from '../catalog';
 export interface Recipe {
   station?: string;
   pattern: readonly (readonly (string | null)[])[];
@@ -27,7 +28,7 @@ function signature(rows: readonly (readonly (string | null)[])[]) {
 }
 export class RecipeBook {
   private readonly patterns = new Map<string, Recipe>();
-  constructor(readonly recipes: readonly Recipe[]) {
+  constructor(readonly recipes: readonly Recipe[], materials = installedMaterials) {
     for (const recipe of recipes) {
       const { pattern, output } = recipe,
         width = pattern[0]?.length ?? 0;
@@ -38,10 +39,10 @@ export class RecipeBook {
         width > 3 ||
         pattern.some(
           (row) =>
-            row.length !== width || row.some((id) => id !== null  && !Object.hasOwn(ITEMS, id)),
+            row.length !== width || row.some((id) => id !== null  && !Object.hasOwn(materials.items, id)),
         ) ||
-        !Object.hasOwn(ITEMS, output.item) ||
-        recipe.byproducts?.some(stack => !Object.hasOwn(ITEMS, stack.item) || !Number.isSafeInteger(stack.amount) || stack.amount <= 0) ||
+        !Object.hasOwn(materials.items, output.item) ||
+        recipe.byproducts?.some(stack => !Object.hasOwn(materials.items, stack.item) || !Number.isSafeInteger(stack.amount) || stack.amount <= 0) ||
         !Number.isSafeInteger(output.amount) ||
         output.amount <= 0 ||
         this.patterns.has(key)

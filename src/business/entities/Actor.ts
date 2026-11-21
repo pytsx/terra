@@ -1,4 +1,4 @@
-import { B, TILE } from '../catalog';
+import { TILE } from '../catalog';
 import type { World } from '../world/World';
 export interface ActorView {
   readonly x: number;
@@ -28,7 +28,7 @@ export abstract class Actor {
     let immersed = 0;
     for (let ty = Math.floor(this.y / TILE); ty <= Math.floor((this.y + this.h) / TILE); ty++) {
       const id = world.get(tx, ty);
-      if (id !== B.AIR && id !== B.WATER && id !== B.TORCH) continue;
+      if (id !== world.materials.keys.AIR && id !== world.materials.keys.WATER && id !== world.materials.keys.TORCH) continue;
       const bottom = (ty + 1) * TILE;
       const surface = bottom - world.waterAt(tx, ty, id) * TILE;
       immersed += Math.max(0, Math.min(this.y + this.h, bottom) - Math.max(this.y, surface));

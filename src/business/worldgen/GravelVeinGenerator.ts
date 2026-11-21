@@ -1,4 +1,3 @@
-import { B } from '../catalog';
 import { noise1, rand01 } from '../../shared/math';
 import type { GenerationContext, WorldGenerator } from './types';
 
@@ -34,8 +33,8 @@ export class GravelVeinGenerator implements WorldGenerator {
           const width = 1.15 + rand01(region, Math.floor(depth / 12), context.seed ^ 0x915b) * 1.35;
           if (Math.abs(gx - center) > width) continue;
           const current = context.get(x, y);
-          if (current === B.DIRT || current === B.STONE || current === B.DEEP ||
-            (exposed && depth === 0 && current === B.GRASS)) context.set(x, y, B.GRAVEL);
+          if (current === context.keys.DIRT || current === context.keys.STONE || current === context.keys.DEEP ||
+            (exposed && depth === 0 && current === context.keys.GRASS)) context.set(x, y, context.keys.GRAVEL);
         }
       }
     }

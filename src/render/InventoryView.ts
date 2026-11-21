@@ -1,6 +1,5 @@
 import {
   BELT_SIZE,
-  ITEMS,
   type Slot,
   type SlotRef,
   type Stack,
@@ -44,7 +43,7 @@ export class InventoryView {
       ' ' +
       (ref.index + (ref.area === 'bag' && !belt ? 1 - BELT_SIZE : 1)) +
       ' · ' +
-      (slot ? ITEMS[slot.item].name + ' × ' + slot.amount : 'Vazio');
+      (slot ? this.icons.materials.items[slot.item].name + ' × ' + slot.amount : 'Vazio');
     button.setAttribute('aria-label', button.title);
     button.draggable = false;
     if (belt) {
@@ -57,7 +56,7 @@ export class InventoryView {
   private decorate(button: HTMLElement, stack: Stack) {
     button.dataset.item = stack.item;
     button.append(this.icons.item(stack.item), node('b', String(stack.amount)));
-    const max = ITEMS[stack.item].armor?.durability ?? ITEMS[stack.item].tool?.durability;
+    const max = this.icons.materials.items[stack.item].armor?.durability ?? this.icons.materials.items[stack.item].tool?.durability;
     if (max && stack.durability !== undefined) {
       const durability = node('span', undefined, 'durability');
       const ratio = stack.durability / max;
@@ -92,7 +91,7 @@ export class InventoryView {
     dialog.classList.toggle('processing-mode', !!m.processing);
     dialog.classList.remove('station-mill', 'station-oven');
     element('bagSeed').textContent = m.station ? '' : m.seed;
-    element('bag-title').textContent = m.processing?.name ?? (m.station ? ITEMS[m.station]?.name ?? m.station : 'Mochila de campo');
+    element('bag-title').textContent = m.processing?.name ?? (m.station ? this.icons.materials.items[m.station]?.name ?? m.station : 'Mochila de campo');
     element('craftSize').textContent = m.processing ? '' : m.size + ' × ' + m.size;
     const grid = element('craftGrid');
     grid.style.setProperty('--side', String(m.size));
@@ -116,8 +115,8 @@ export class InventoryView {
       button.dataset.available = String(available);
       button.setAttribute('aria-disabled', String(!available));
       button.classList.toggle('unavailable', !available);
-      const ingredients = requirements.map(({ item, amount }) => `${ITEMS[item].name} × ${amount}`).join(', ');
-      button.title = `Preencher receita de ${ITEMS[output.item].name} · Necessário: ${ingredients}`;
+      const ingredients = requirements.map(({ item, amount }) => `${this.icons.materials.items[item].name} × ${amount}`).join(', ');
+      button.title = `Preencher receita de ${this.icons.materials.items[output.item].name} · Necessário: ${ingredients}`;
       button.setAttribute('aria-label', button.title);
       button.append(this.icons.item(output.item));
       if (output.amount > 1) button.append(node('b', String(output.amount)));
@@ -136,16 +135,16 @@ export class InventoryView {
     result.disabled = !m.result;
     result.draggable = false;
     result.title = m.result
-      ? 'Recolher ' + ITEMS[m.result.item].name + ' × ' + m.result.amount
+      ? 'Recolher ' + this.icons.materials.items[m.result.item].name + ' × ' + m.result.amount
       : 'Aguardando uma combinação';
     result.setAttribute('aria-label', result.title);
     if (m.result) this.decorate(result, m.result);
-    element('resultName').textContent = m.result ? ITEMS[m.result.item].name : 'Resultado';
+    element('resultName').textContent = m.result ? this.icons.materials.items[m.result.item].name : 'Resultado';
     this.drawProcessing(m.processing);
     const station = m.processing?.definitionId ?? m.station;
     element('packEmblem').replaceChildren(
       m.processing ? this.icons.draw(m.processing.block) :
-        station && ITEMS[station] ? this.icons.item(station) : node('span', undefined, 'bag-icon'),
+        station && this.icons.materials.items[station] ? this.icons.item(station) : node('span', undefined, 'bag-icon'),
     );
   }
   private drawProcessing(model: BagModel['processing']) {
@@ -180,7 +179,7 @@ export class InventoryView {
       group.replaceChildren(...model[area].map((slot, index) => {
         const button = node('button', undefined, 'cell');
         button.dataset.stationSlot = area + '-' + index;
-        button.title = slot ? ITEMS[slot.item].name + ' × ' + slot.amount : 'Vazio';
+        button.title = slot ? this.icons.materials.items[slot.item].name + ' × ' + slot.amount : 'Vazio';
         button.setAttribute('aria-label', button.title);
         if (slot) this.decorate(button, slot);
         return button;

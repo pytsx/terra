@@ -1,4 +1,4 @@
-import { B, TILE } from '../catalog';
+import { TILE } from '../catalog';
 import { Animal } from './Animal';
 import { Health } from '../entities/Health';
 import type { ActorView } from '../entities/Actor';
@@ -54,9 +54,9 @@ export class Organism extends Animal implements EngineEntity {
           this.face = Math.sign(this.x - threat.view().x) || this.face;
           return true;
         },
-        is: (dx, dy, material) => world.get(x + dx, y + dy) === B[material],
+        is: (dx, dy, material) => world.get(x + dx, y + dy) === world.materials.keys[material],
         change: (dx, dy, from, to) => {
-          const changed = world.changeHabitat(x + dx, y + dy, B[from], B[to]);
+          const changed = world.changeHabitat(x + dx, y + dy, world.materials.keys[from], world.materials.keys[to]);
           const food = this.species.config.diet.food;
           if (changed && ((food === 'grass' && from === 'GRASS') || (food === 'wood' && from === 'WOOD'))) this.eat();
           return changed;
@@ -75,7 +75,7 @@ export class Organism extends Animal implements EngineEntity {
     }
     if (this.activity === 'climb' || this.activity === 'descend') {
       const x = Math.floor((this.x + this.w / 2) / TILE), y = Math.floor((this.y + this.h / 2) / TILE);
-      if (world.get(x, y) === B.WOOD && !world.solid(x, y)) {
+      if (world.get(x, y) === world.materials.keys.WOOD && !world.solid(x, y)) {
         this.vx = 0;
         this.vy = this.activity === 'climb' ? -21 : 21;
         this.move(dt, world);

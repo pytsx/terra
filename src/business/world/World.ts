@@ -1,4 +1,5 @@
-import { B, TILE, WORLD_W, WORLD_H, LEGACY_WORLD_H, CURRENT_GENERATION, CHUNK_WIDTH, CHUNK_HEIGHT, BLOCKS } from '../catalog';
+import { installedMaterials } from '../content/Materials';
+import { TILE, WORLD_W, WORLD_H, LEGACY_WORLD_H, CURRENT_GENERATION, CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
 import { RNG, clamp, noise1, noise2, hashText } from '../../shared/math';
 import type { TileEdit, BlockDamage, ExploredSection } from '../save';
 import type { RuntimeContent } from '../content/RuntimeContent';
@@ -51,7 +52,8 @@ export class World {
     transformBlock: defineCommand('transformBlock', this.applyNaturalTransformation.bind(this)),
     placeFeature: defineCommand('placeFeature', this.applyNaturalFeature.bind(this)),
   };
-  readonly hydrology = new Hydrology();
+  readonly hydrology: Hydrology;
+  readonly materials: typeof installedMaterials;
   readonly evolution: WorldEvolutionSystem;
   /** Compatibility alias for saves and integrations from the transformation-only version. */
   get transformations() { return this.evolution; }
@@ -104,7 +106,7 @@ export class World {
     if (!this.inside(x, y)) return false;
     // Removing a player construction must not leave an invisible provenance
     // barrier that permanently prevents vegetation from occupying empty space.
-    if (this.get(x, y) === B.AIR) return eligibility.natural;
+    if (this.get(x, y) === this.materials.keys.AIR) return eligibility.natural;
     const natural = !this.edited(x, y) || this.naturalCells.has(this.key(x, y));
     return natural ? eligibility.natural : eligibility.playerPlaced;
   }
@@ -155,10 +157,10 @@ export class World {
 
   isMatureTreeBase(x: number, y: number) {
     const soil = this.get(x, y + 1);
-    if (soil !== B.DIRT && soil !== B.GRASS) return false;
+    if (soil !== this.materials.keys.DIRT && soil !== this.materials.keys.GRASS) return false;
     let row = y;
-    while (row >= 0 && this.get(x, row) === B.WOOD && this.canTransformNaturally(x, row)) row--;
-    return y - row >= 3 && this.get(x, row) === B.LEAF && this.canTransformNaturally(x, row);
+    while (row >= 0 && this.get(x, row) === this.materials.keys.WOOD && this.canTransformNaturally(x, row)) row--;
+    return y - row >= 3 && this.get(x, row) === this.materials.keys.LEAF && this.canTransformNaturally(x, row);
   }
   exposedToSky(x: number, y: number) {
     if (!this.inside(x, y)) return false;
@@ -167,7 +169,7 @@ export class World {
       // A sky query is authoritative and therefore loads only the sections it
       // actually crosses instead of treating unloaded terrain as a ceiling.
       const block = this.get(x, row);
-      if (block !== B.AIR && block !== B.WATER && block !== B.LAVA && block !== B.TORCH)
+      if (block !== this.materials.keys.AIR && block !== this.materials.keys.WATER && block !== this.materials.keys.LAVA && block !== this.materials.keys.TORCH)
         return false;
     }
     return true;
@@ -189,7 +191,9 @@ export class World {
   private fallTime = 0;
   private readonly partitionFallTime = new Float64Array(BLOCK_PARTITION_COUNT);
   readonly spawnX: number;
-  constructor(readonly seed: string, readonly generationVersion = CURRENT_GENERATION, content?: Pick<RuntimeContent, 'generation' | 'transformations' | 'structures'>) {
+  constructor(readonly seed: string, readonly generationVersion = CURRENT_GENERATION, content?: Pick<RuntimeContent, 'materials' | 'generation' | 'transformations' | 'structures'>) {
+    this.materials = content?.materials ?? installedMaterials;
+    this.hydrology = new Hydrology(this.materials);
     this.evolution = new WorldEvolutionSystem(content?.transformations, new FeatureGenerator(content?.structures));
     this.h = hashText(seed);
     this.blockUpdates = new BlockPartitionScheduler(this.h);
@@ -200,7 +204,7 @@ export class World {
     this.surface = new Int16Array(this.infinite ? 0 : WORLD_W);
     this.chunks = new ChunkStore(
       Math.ceil(this.height / CHUNK_HEIGHT),
-      cx => new TerrainColumn(this.h, cx, this.height, this.spawnX, this.generationVersion, content?.generation.terrain),
+      cx => new TerrainColumn(this.h, cx, this.height, this.spawnX, this.generationVersion, content?.generation.terrain, this.materials.keys, content?.generation.biomes),
       (cx, cy, cells) => this.restoreSection(cx, cy, cells),
       cx => {
         this.evolution.releaseColumn(cx);
@@ -222,7 +226,7 @@ export class World {
     if (this.infinite) this.onBlockEdited(({ x, y, block }) => this.survey.update(x, y, block));
     if (generationVersion === 1) this.generateLegacy();
     else if (generationVersion === 2) (content?.generation.modern ?? modernPipeline).run(createGenerationContext({
-      generationVersion, seed: this.h, width: this.width, height: this.height, spawnX: this.spawnX,
+      keys: this.materials.keys, generationVersion, seed: this.h, width: this.width, height: this.height, spawnX: this.spawnX,
       originX: 0, surface: this.surface, globalX: (x) => x, get: (x, y) => this.get(x, y),
       set: (x, y, block) => this.set(x, y, block, false),
     }));
@@ -235,15 +239,15 @@ export class World {
     return (this.infinite || (x >= 0 && x < this.width)) && y >= 0 && y < this.height;
   }
   get(x: number, y: number) {
-    if (y < 0) return B.AIR;
-    if (!this.inside(x, y)) return B.BEDROCK;
+    if (y < 0) return this.materials.keys.AIR;
+    if (!this.inside(x, y)) return this.materials.keys.BEDROCK;
     if (!this.infinite) return this.tiles[this.idx(x, y)];
     const chunkX = Math.floor(x / CHUNK_WIDTH), localX = x - chunkX * CHUNK_WIDTH;
     return this.chunks.section(chunkX, Math.floor(y / CHUNK_HEIGHT))[(y % CHUNK_HEIGHT) * CHUNK_WIDTH + localX];
   }
   peek(x: number, y: number) {
-    if (y < 0) return B.AIR;
-    if (!this.inside(x, y)) return B.BEDROCK;
+    if (y < 0) return this.materials.keys.AIR;
+    if (!this.inside(x, y)) return this.materials.keys.BEDROCK;
     if (!this.infinite) return this.tiles[this.idx(x, y)];
     const chunkX = Math.floor(x / CHUNK_WIDTH), localX = x - chunkX * CHUNK_WIDTH;
     const section = this.chunks.peek(chunkX, Math.floor(y / CHUNK_HEIGHT));
@@ -254,8 +258,8 @@ export class World {
   }
   mapPeek(x: number, y: number) {
     const mapped = this.infinite ? this.survey.peek(x, y) : this.peek(x, y);
-    if (mapped !== B.AIR && mapped !== B.WATER) return mapped;
-    return this.waterAt(x, y, mapped) >= 0.15 ? B.WATER : B.AIR;
+    if (mapped !== this.materials.keys.AIR && mapped !== this.materials.keys.WATER) return mapped;
+    return this.waterAt(x, y, mapped) >= 0.15 ? this.materials.keys.WATER : this.materials.keys.AIR;
   }
   exploredBounds() {
     if (!this.infinite) return { left: 0, right: this.width - 1, top: 0, bottom: this.height - 1 };
@@ -293,7 +297,7 @@ export class World {
     }
   }
   private validCell(x: number, y: number, id: number) {
-    return this.inside(x, y) && Number.isSafeInteger(x) && Number.isInteger(y) && Object.hasOwn(BLOCKS, id);
+    return this.inside(x, y) && Number.isSafeInteger(x) && Number.isInteger(y) && Object.hasOwn(this.materials.blocks, id);
   }
   private storeCell(x: number, y: number, id: number) {
     if (this.infinite) {
@@ -339,10 +343,10 @@ export class World {
   }
   private applyMining(x: number, y: number, work: number) {
     const id = this.get(x, y),
-      hardness = BLOCKS[id].hardness;
+      hardness = this.materials.blocks[id].hardness;
     if (!hardness || work <= 0) return 0;
     const next = Math.min(1, this.damageAt(x, y) + work / hardness);
-    if (next === 1) this.set(x, y, B.AIR);
+    if (next === 1) this.set(x, y, this.materials.keys.AIR);
     else this.setDamage(x, y, next);
     return next;
   }
@@ -364,12 +368,12 @@ export class World {
         ? entry : [entry[0] % this.width, Math.floor(entry[0] / this.width), entry[1]];
       if (!this.inside(x, y) || !(amount > 0 && amount < 1)) continue;
       const block = this.peek(x, y);
-      if (block === undefined || BLOCKS[block]?.hardness) this.setDamage(x, y, amount);
+      if (block === undefined || this.materials.blocks[block]?.hardness) this.setDamage(x, y, amount);
     }
   }
   private queueFall(x: number, y: number) {
     if (!this.inside(x, y) || y + 1 >= this.height) return;
-    if (BLOCKS[this.get(x, y)].gravity && !BLOCKS[this.get(x, y + 1)].solid)
+    if (this.materials.blocks[this.get(x, y)].gravity && !this.materials.blocks[this.get(x, y + 1)].solid)
       this.falling.add(this.key(x, y));
   }
   stepGravity(
@@ -404,16 +408,16 @@ export class World {
       const
         id = this.get(x, y),
         below = this.get(x, y + 1);
-      if (!BLOCKS[id].gravity || BLOCKS[below].solid) continue;
+      if (!this.materials.blocks[id].gravity || this.materials.blocks[below].solid) continue;
       if (occupied(x, y + 1)) {
         this.falling.add(key);
         continue;
       }
       const damage = this.damageAt(x, y);
-      this.set(x, y, B.AIR);
+      this.set(x, y, this.materials.keys.AIR);
       this.writeBlock(x, y + 1, id, { damage });
       movedThisFrame?.add(this.key(x, y + 1));
-      if (below !== B.AIR) onDisplace(below, x, y + 1);
+      if (below !== this.materials.keys.AIR) onDisplace(below, x, y + 1);
     }
   }
 
@@ -447,8 +451,8 @@ export class World {
   }
   solid(x: number, y: number) {
     const block = this.get(x, y);
-    if ((block === B.WOOD || block === B.LEAF) && this.canTransformNaturally(x, y)) return false;
-    return BLOCKS[block].solid;
+    if ((block === this.materials.keys.WOOD || block === this.materials.keys.LEAF) && this.canTransformNaturally(x, y)) return false;
+    return this.materials.blocks[block].solid;
   }
   heightAt(x: number) {
     const tx = Math.floor(x);
@@ -462,7 +466,7 @@ export class World {
       const cx = Math.floor(x / CHUNK_WIDTH);
       return this.chunks.terrain(cx).landscape!.biome(x - cx * CHUNK_WIDTH);
     }
-    return BLOCKS[this.get(x, this.heightAt(x))].biome ?? 'Floresta';
+    return this.materials.blocks[this.get(x, this.heightAt(x))].biome ?? 'Floresta';
   }
   private key(x: number, y: number) { return `${x},${y}`; }
   private coords(key: string): [number, number] {
@@ -478,14 +482,14 @@ export class World {
       // A saved edit can release sand in its own cell or immediately above it.
       for (const index of edits.keys())
         for (const candidate of [index, index - CHUNK_WIDTH]) {
-          if (candidate < first || candidate >= end || !BLOCKS[cells[candidate - first]].gravity) continue;
+          if (candidate < first || candidate >= end || !this.materials.blocks[cells[candidate - first]].gravity) continue;
           const y = Math.floor(candidate / CHUNK_WIDTH);
           if (y + 1 < this.height) this.falling.add(this.key(cx * CHUNK_WIDTH + candidate % CHUNK_WIDTH, y));
         }
     }
     const key = this.key(cx, cy), damage = this.damage.get(key);
     if (damage) {
-      for (const index of damage.keys()) if (!BLOCKS[cells[index]].hardness) damage.delete(index);
+      for (const index of damage.keys()) if (!this.materials.blocks[cells[index]].hardness) damage.delete(index);
       if (!damage.size) this.damage.delete(key);
     }
   }
@@ -507,7 +511,7 @@ export class World {
       ) {
         let dx = (x - cx) / rx,
           dy = (y - cy) / ry;
-        if (dx * dx + dy * dy < 1 && y > this.heightAt(x) + 5) this.set(x, y, B.AIR, false);
+        if (dx * dx + dy * dy < 1 && y > this.heightAt(x) + 5) this.set(x, y, this.materials.keys.AIR, false);
       }
   }
   private generateLegacy() {
@@ -522,11 +526,11 @@ export class World {
       const desert = noise1(x * 0.007, sh + 72) > 0.74;
       for (let y = surface; y < this.height; y++) {
         let id;
-        if (y >= this.height - 3) id = B.BEDROCK;
-        else if (y === surface) id = desert ? B.SAND : B.GRASS;
-        else if (y < surface + (desert ? 8 : 5)) id = desert ? B.SAND : B.DIRT;
-        else if (y > 114) id = B.DEEP;
-        else id = B.STONE;
+        if (y >= this.height - 3) id = this.materials.keys.BEDROCK;
+        else if (y === surface) id = desert ? this.materials.keys.SAND : this.materials.keys.GRASS;
+        else if (y < surface + (desert ? 8 : 5)) id = desert ? this.materials.keys.SAND : this.materials.keys.DIRT;
+        else if (y > 114) id = this.materials.keys.DEEP;
+        else id = this.materials.keys.STONE;
         this.set(x, y, id, false);
       }
     }
@@ -536,7 +540,7 @@ export class World {
         if (y < this.heightAt(x) + 7) continue;
         const wide = noise2(x * 0.061, y * 0.066, this.h ^ 0xa4c32);
         const detail = noise2(x * 0.128, y * 0.12, this.h ^ 0x4ab92);
-        if (wide > 0.598 || (wide > 0.535 && detail > 0.61)) this.set(x, y, B.AIR, false);
+        if (wide > 0.598 || (wide > 0.535 && detail > 0.61)) this.set(x, y, this.materials.keys.AIR, false);
       }
     // Túneis que interligam as cavernas; aglomerados de minério nas rochas.
     for (let i = 0; i < 130; i++) {
@@ -553,7 +557,7 @@ export class World {
         y = clamp(y, this.heightAt(x) + 9, this.height - 8);
       }
     }
-    const oreTypes = [B.COAL, B.COPPER, B.GOLD, B.CRYSTAL];
+    const oreTypes = [this.materials.keys.COAL, this.materials.keys.COPPER, this.materials.keys.GOLD, this.materials.keys.CRYSTAL];
     for (let i = 0; i < 2200; i++) {
       const x = rng.int(4, this.width - 5),
         y = rng.int(this.heightAt(x) + 7, this.height - 7);
@@ -575,7 +579,7 @@ export class World {
           const xx = x + ox,
             yy = y + oy,
             t = this.get(xx, yy);
-          if (t === B.STONE || t === B.DEEP) this.set(xx, yy, type, false);
+          if (t === this.materials.keys.STONE || t === this.materials.keys.DEEP) this.set(xx, yy, type, false);
         }
     }
     // Árvores no solo e pequenas concentrações de folhagem.
@@ -585,27 +589,27 @@ export class World {
       if (Math.abs(x - this.spawnX) < 8) continue;
       const y = this.surface[x];
       if (
-        this.get(x, y) !== B.GRASS ||
+        this.get(x, y) !== this.materials.keys.GRASS ||
         Math.abs(this.surface[x - 2] - y) > 2 ||
         Math.abs(this.surface[x + 2] - y) > 2
       )
         continue;
       const height = rng.int(4, 7);
-      for (let j = 1; j <= height; j++) this.set(x, y - j, B.WOOD, false);
+      for (let j = 1; j <= height; j++) this.set(x, y - j, this.materials.keys.WOOD, false);
       for (let dy = -2; dy <= 1; dy++)
         for (let dx = -3; dx <= 3; dx++) {
           if (dx * dx * 0.5 + dy * dy * 1.2 > 5.5 || rng.next() < 0.08) continue;
-          if (this.get(x + dx, y - height + dy) === B.AIR)
-            this.set(x + dx, y - height + dy, B.LEAF, false);
+          if (this.get(x + dx, y - height + dy) === this.materials.keys.AIR)
+            this.set(x + dx, y - height + dy, this.materials.keys.LEAF, false);
         }
       previousTree = x;
     }
     // Garante uma área livre perto do spawn.
     const sx = this.spawnX;
     for (let x = sx - 3; x <= sx + 3; x++)
-      for (let y = this.surface[x] - 5; y < this.surface[x]; y++) this.set(x, y, B.AIR, false);
+      for (let y = this.surface[x] - 5; y < this.surface[x]; y++) this.set(x, y, this.materials.keys.AIR, false);
     // Pequeno acampamento inicial com tochas — marcadores de exploração.
-    for (const config of Object.values(BLOCKS)) {
+    for (const config of Object.values(this.materials.blocks)) {
       if (!config.spawnDecoration) continue;
       for (const offset of config.spawnDecoration.offsets) {
         const x = sx + offset;
@@ -644,5 +648,5 @@ export class World {
 }
 export type TerrainView = Pick<
   World,
-  'seed' | 'width' | 'height' | 'infinite' | 'h' | 'get' | 'peek' | 'mapPeek' | 'exploredBounds' | 'heightAt' | 'biomeAt' | 'damageAt' | 'waterAt' | 'waterFlowingAt' | 'waterDrippingAt' | 'waterDirectionAt' | 'fluidKindAt' | 'onBlockEdited'
+  'materials' | 'seed' | 'width' | 'height' | 'infinite' | 'h' | 'get' | 'peek' | 'mapPeek' | 'exploredBounds' | 'heightAt' | 'biomeAt' | 'damageAt' | 'waterAt' | 'waterFlowingAt' | 'waterDrippingAt' | 'waterDirectionAt' | 'fluidKindAt' | 'onBlockEdited'
 >;

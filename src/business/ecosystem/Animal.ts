@@ -1,4 +1,4 @@
-import { B, TILE } from '../catalog';
+import { TILE } from '../catalog';
 import { Mob } from '../entities/Mob';
 import type { EngineEntity } from '../entities/EntityRegistry';
 import type { World } from '../world/World';
@@ -45,8 +45,8 @@ export abstract class Animal extends Mob {
       for (const dx of distance ? [-distance, distance] : [0]) {
         for (const y of [floor - 1, floor, floor - 2]) {
           const block = world.get(x + dx, y);
-          const accessible = block === B.WATER || block === B.AIR || block === B.TORCH ||
-            (diet.poreWater && (block === B.DIRT || block === B.GRASS || block === B.SAND));
+          const accessible = block === world.materials.keys.WATER || block === world.materials.keys.AIR || block === world.materials.keys.TORCH ||
+            (diet.poreWater && (block === world.materials.keys.DIRT || block === world.materials.keys.GRASS || block === world.materials.keys.SAND));
           if (!accessible || world.waterAt(x + dx, y, block) < 0.025) continue;
           this.seeking = 'water';
           this.direction = Math.sign(dx);
@@ -86,13 +86,13 @@ export abstract class Animal extends Mob {
       for (const dx of distance ? [-distance, distance] : [0]) {
         const tx = x + dx, y = floor - Number(diet.food === 'wood');
         const block = world.get(tx, y);
-        const grass = diet.food === 'grass' && block === B.GRASS;
-        const stump = diet.food === 'wood' && block === B.WOOD && !world.solid(tx, y) && world.get(tx, y - 1) === B.AIR;
-        const litter = diet.food === 'detritus' && (block === B.DIRT || block === B.SAND || block === B.GRASS) &&
+        const grass = diet.food === 'grass' && block === world.materials.keys.GRASS;
+        const stump = diet.food === 'wood' && block === world.materials.keys.WOOD && !world.solid(tx, y) && world.get(tx, y - 1) === world.materials.keys.AIR;
+        const litter = diet.food === 'detritus' && (block === world.materials.keys.DIRT || block === world.materials.keys.SAND || block === world.materials.keys.GRASS) &&
           world.waterAt(tx, y, block) >= 0.08;
         if (!(grass || stump || litter)) continue;
         if (!distance) {
-          if (!litter && !world.changeHabitat(tx, y, block, grass ? B.DIRT : B.AIR)) continue;
+          if (!litter && !world.changeHabitat(tx, y, block, grass ? world.materials.keys.DIRT : world.materials.keys.AIR)) continue;
           this.eat();
         }
         this.seeking = 'food';

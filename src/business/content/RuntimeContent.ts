@@ -1,3 +1,4 @@
+import type { Materials } from './Materials';
 import type { WorldFeatureRegistry } from '../worldgen/features/WorldFeatureRegistry';
 import type { EntityRegistry } from '../entities/EntityRegistry';
 import type { RecipeBook } from '../craft/RecipeBook';
@@ -7,6 +8,7 @@ import type { FuelDefinition } from '../stations/StationTypes';
 import type { GenerationPipeline } from '../worldgen/types';
 
 export interface RuntimeContent {
+  readonly materials: Materials;
   readonly entities: typeof EntityRegistry;
   readonly recipes: RecipeBook;
   readonly transformations: TransformationRegistry;
@@ -14,7 +16,7 @@ export interface RuntimeContent {
   readonly processes: ProcessingRecipeRegistry;
   readonly fuels: Pick<ReadonlyMap<string, FuelDefinition>, 'get'>;
   readonly structures: WorldFeatureRegistry;
-  readonly generation: { readonly terrain: GenerationPipeline; readonly modern: GenerationPipeline };
+  readonly generation: { readonly biomes: NonNullable<ConstructorParameters<typeof import('../worldgen/Landscape').Landscape>[4]>; readonly terrain: GenerationPipeline; readonly modern: GenerationPipeline };
   readonly biomeRain: (name: string) => number;
 }
 

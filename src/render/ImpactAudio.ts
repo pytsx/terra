@@ -1,7 +1,9 @@
-import { BLOCKS, type GameEvent } from '../business';
+import type { Materials } from '../business/content/Materials';
+import { type GameEvent } from '../business';
 
 /** Optional in-world audio. The menu gesture unlocks the browser's audio context. */
 export class ImpactAudio {
+  constructor(private readonly materials: Materials) {}
   private context?: AudioContext;
   private enabled = false;
   private last = -Infinity;
@@ -19,7 +21,7 @@ export class ImpactAudio {
     const now = ctx.currentTime;
     if (event.type === 'mineHit' && now - this.last < 0.065) return;
     this.last = now;
-    const hardness = event.type === 'entityHit' ? 0 : (BLOCKS[event.block].hardness ?? 1);
+    const hardness = event.type === 'entityHit' ? 0 : (this.materials.blocks[event.block].hardness ?? 1);
     const freq = 95 + Math.min(2, hardness) * 150;
     const duration = event.type === 'mineHit' ? 0.055 : 0.10;
     const tone = ctx.createOscillator(), gain = ctx.createGain();

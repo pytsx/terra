@@ -1,11 +1,12 @@
-import { ITEMS, type Stack } from '../catalog';
+import { installedMaterials } from '../content/Materials';
+import { type Stack } from '../catalog';
 import { fuels, processingRecipes, stationRegistry } from './StationRegistry';
 import type { ProcessingRecipe, StationInstance } from './StationTypes';
 import { canStore, countItem, store, storeAt, take, takeAt } from './SlotStorage';
 
 export class ProcessingSystem {
   constructor(private readonly stations = stationRegistry, private readonly recipes = processingRecipes,
-    private readonly fuelTypes: Pick<typeof fuels, 'get'> = fuels) {}
+    private readonly fuelTypes: Pick<typeof fuels, 'get'> = fuels, private readonly materials = installedMaterials) {}
   completed = 0;
   status(station: StationInstance) {
     const definition = this.stations.get(station.definitionId)!;
@@ -28,7 +29,7 @@ export class ProcessingSystem {
   }
   insert(station: StationInstance, area: 'input' | 'fuel', stack: Stack) {
     const definition = this.stations.get(station.definitionId);
-    if (!definition?.storage || !Object.hasOwn(ITEMS, stack.item) || !Number.isSafeInteger(stack.amount) || stack.amount <= 0) return stack.amount;
+    if (!definition?.storage || !Object.hasOwn(this.materials.items, stack.item) || !Number.isSafeInteger(stack.amount) || stack.amount <= 0) return stack.amount;
     if (!this.insertAllowed(definition, area, stack)) return stack.amount;
     const slots = station[area], left = store(slots, { ...stack }, definition.storage.stackLimit); if (left !== stack.amount) station.revision++; return left;
   }
@@ -49,7 +50,7 @@ export class ProcessingSystem {
     return result;
   }
   private insertAllowed(definition: NonNullable<ReturnType<typeof stationRegistry.get>>, area: 'input' | 'fuel', stack: Stack) {
-    if (!Object.hasOwn(ITEMS, stack.item) || ITEMS[stack.item].tool || ITEMS[stack.item].armor || ITEMS[stack.item].unique) return false;
+    if (!Object.hasOwn(this.materials.items, stack.item) || this.materials.items[stack.item].tool || this.materials.items[stack.item].armor || this.materials.items[stack.item].unique) return false;
     if (area === 'fuel') return definition.energy.type === 'thermal' && definition.energy.acceptedFuels.includes(stack.item);
     return this.recipes.compatible(definition).some(recipe => recipe.inputs.some(input => input.item === stack.item));
   }

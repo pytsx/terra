@@ -1,6 +1,7 @@
+import { installedMaterials } from '../content/Materials';
 import { transformationAssets, type TransformationAsset } from '../../assets';
 import { compileCondition } from './TransformationEvaluator';
-import { B, ITEMS } from '../catalog';
+
 import { GAME_DAY_SECONDS } from '../time';
 import { worldFeatureRegistry } from '../worldgen/features/WorldFeatureRegistry';
 
@@ -26,13 +27,13 @@ export class TransformationRegistry {
   readonly rules: readonly TransformationRule[];
   private readonly bySource = new Map<number, readonly TransformationRule[]>();
 
-  constructor(assets: readonly TransformationAsset[] = transformationAssets, structures = worldFeatureRegistry) {
+  constructor(assets: readonly TransformationAsset[] = transformationAssets, structures = worldFeatureRegistry, materials = installedMaterials) {
     const ids = new Set<string>();
     const resolved = assets.map((asset): TransformationRule => {
       if (!asset.id || ids.has(asset.id)) throw new Error(`Transformação duplicada: ${asset.id}`);
       ids.add(asset.id);
       const sourceKey = 'source' in asset ? asset.source : asset.from;
-      const source = B[sourceKey];
+      const source = materials.keys[sourceKey];
       const seconds = (asset.duration.days ?? 0) * GAME_DAY_SECONDS + (asset.duration.seconds ?? 0);
       const eligibility = asset.eligibility ?? { natural: true, playerPlaced: false };
       const test = compileCondition(asset.conditions, asset.id);
@@ -40,7 +41,7 @@ export class TransformationRegistry {
         { type: 'transformBlock' as const, to: asset.to, preserve: asset.preserve };
       let action: EvolutionAction;
       if (declaredAction.type === 'transformBlock') {
-        const to = B[declaredAction.to];
+        const to = materials.keys[declaredAction.to];
         if (to === undefined || to === source || declaredAction.preserve.some(value => value !== 'waterVolume'))
           throw new Error(`Transformação ${asset.id}: ação inválida`);
         action = Object.freeze({ type: 'transformBlock', to, preserve: Object.freeze([...declaredAction.preserve]) });
@@ -51,7 +52,7 @@ export class TransformationRegistry {
           (!structures.has(declaredAction.feature) || typeof declaredAction.replaceSource !== 'boolean'))
           throw new Error(`Transformação ${asset.id}: feature desconhecida`);
         if (declaredAction.type === 'spawnItem' &&
-          (!Object.hasOwn(ITEMS, declaredAction.item) || !Number.isSafeInteger(declaredAction.amount) ||
+          (!Object.hasOwn(materials.items, declaredAction.item) || !Number.isSafeInteger(declaredAction.amount) ||
             declaredAction.amount <= 0))
           throw new Error(`Transformação ${asset.id}: item inválido`);
         action = Object.freeze({ ...declaredAction });

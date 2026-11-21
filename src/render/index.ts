@@ -1,3 +1,4 @@
+import type { RuntimeContent } from '../business/content/RuntimeContent';
 import { Atlas } from './Atlas';
 import { ImpactAudio } from './ImpactAudio';
 import { ItemIcons } from './ItemIcons';
@@ -8,18 +9,18 @@ import { element } from './elements';
 import { WorldMapView } from './WorldMapView';
 export { element };
 export type { BagModel } from './InventoryView';
-export function createViews() {
-  const atlas = new Atlas(),
+export function createViews(content: RuntimeContent) {
+  const atlas = new Atlas(content),
     icons = new ItemIcons(atlas);
   const canvas = element<HTMLCanvasElement>('game');
   return {
     canvas,
-    audio: new ImpactAudio(),
+    audio: new ImpactAudio(content.materials),
     world: new WorldRenderer(canvas, element<HTMLCanvasElement>('minimap'), atlas),
     map: new WorldMapView(
       element<HTMLCanvasElement>('worldMapCanvas'),
       element<HTMLOutputElement>('mapZoomLabel'),
-      element('mapViewPosition'),
+      element('mapViewPosition'), content.materials,
     ),
     bag: new InventoryView(icons),
     hud: new Hud(icons),

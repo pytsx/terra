@@ -1,4 +1,4 @@
-import { ITEMS, type SlotRef, type Expedition } from '../business';
+import { type SlotRef, type Expedition } from '../business';
 import { element, type Views } from '../render';
 
 function refOf(target: EventTarget | null): SlotRef | null {
@@ -107,7 +107,7 @@ export class InventoryControls {
           element('bagFeedback').textContent = 'Libere um slot ou deposite a pilha do cursor para recolher o resultado.';
           return;
         }
-        element('bagFeedback').textContent = `Fabricado · ${result.amount} × ${ITEMS[result.item].name}`;
+        element('bagFeedback').textContent = `Fabricado · ${result.amount} × ${this.game().content.materials.items[result.item].name}`;
         this.refresh();
         return;
       }
@@ -116,7 +116,7 @@ export class InventoryControls {
       if (!ref || !this.game().clickStack(ref)) return;
       const cursor = this.game().cursorStack;
       element('bagFeedback').textContent = cursor
-        ? `${ITEMS[cursor.item].name} na mão`
+        ? `${this.game().content.materials.items[cursor.item].name} na mão`
         : '';
       this.refresh();
     });

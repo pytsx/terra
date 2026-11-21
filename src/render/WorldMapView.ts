@@ -1,4 +1,5 @@
-import { B, BLOCKS, TILE, type Scene } from '../business';
+import type { Materials } from '../business/content/Materials';
+import { TILE, type Scene } from '../business';
 import { MapCamera, type MapExtent } from './MapCamera';
 
 const MAX_MAP_SAMPLES = 120_000;
@@ -14,6 +15,7 @@ export class WorldMapView {
     private readonly canvas: HTMLCanvasElement,
     private readonly zoomLabel: HTMLOutputElement,
     private readonly viewLabel: HTMLElement,
+    private readonly materials: Materials,
   ) {
     this.context = canvas.getContext('2d')!;
     canvas.addEventListener('wheel', event => {
@@ -103,8 +105,8 @@ export class WorldMapView {
     for (let x = left; x <= right; x += stride)
       for (let y = top; y <= bottom; y += stride) {
         const id = scene.world.mapPeek(x, y);
-        if (id === undefined || id === B.AIR) continue;
-        c.fillStyle = BLOCKS[id].color;
+        if (id === undefined || id === this.materials.keys.AIR) continue;
+        c.fillStyle = this.materials.blocks[id].color;
         const screen = this.screen(x, y, rect.width, rect.height);
         c.fillRect(Math.floor(screen.x), Math.floor(screen.y),
           Math.ceil(this.camera.zoom * stride), Math.ceil(this.camera.zoom * stride));

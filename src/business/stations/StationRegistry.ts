@@ -1,14 +1,15 @@
+import { installedMaterials } from '../content/Materials';
 import { production } from '../../assets/production';
-import { B, ITEMS } from '../catalog';
+
 import type { FuelDefinition, ProcessingRecipe, StationDefinition } from './StationTypes';
 
 export class StationRegistry {
   private readonly definitions = new Map<string, StationDefinition>();
   private readonly blocks = new Map<number, StationDefinition>();
-  constructor(values: readonly StationDefinition[]) {
+  constructor(values: readonly StationDefinition[], materials = installedMaterials) {
     for (const value of values) {
       if (!value.id || this.definitions.has(value.id)) throw new Error(`Estação duplicada: ${value.id}`);
-      const block = B[value.block];
+      const block = materials.keys[value.block];
       if (block === undefined || this.blocks.has(block)) throw new Error(`Bloco desconhecido da estação: ${value.block}`);
       if (!['crafting', 'processing'].includes(value.mode) || !['none', 'manual', 'thermal', 'hydraulic'].includes(value.energy.type)) throw new Error(`Modo ou energia inválida: ${value.id}`);
       if (value.energy.type === 'hydraulic' && !(Number.isFinite(value.energy.workPerVolume) && value.energy.workPerVolume > 0))
@@ -25,7 +26,7 @@ export class StationRegistry {
       if (value.energy.type === 'manual' && (!Number.isFinite(value.energy.workRate) || value.energy.workRate <= 0))
         throw new Error(`Energia manual inválida: ${value.id}`);
       if (value.energy.type === 'thermal') {
-        for (const item of value.energy.acceptedFuels) if (!ITEMS[item]) throw new Error(`Combustível desconhecido: ${item}`);
+        for (const item of value.energy.acceptedFuels) if (!materials.items[item]) throw new Error(`Combustível desconhecido: ${item}`);
         if (![value.energy.maxTemperature, value.energy.heatingRate, value.energy.coolingRate]
           .every(n => Number.isFinite(n) && n > 0)) throw new Error(`Energia térmica inválida: ${value.id}`);
       }
@@ -40,10 +41,10 @@ export class StationRegistry {
 export class ProcessingRecipeRegistry {
   private readonly byStation = new WeakMap<StationDefinition, readonly ProcessingRecipe[]>();
   private readonly recipes = new Map<string, ProcessingRecipe>();
-  constructor(values: readonly ProcessingRecipe[]) {
+  constructor(values: readonly ProcessingRecipe[], materials = installedMaterials) {
     for (const value of values) {
       if (!value.id || this.recipes.has(value.id) || !Number.isFinite(value.work) || value.work <= 0 ||
-        !value.requires.length || [...value.inputs, ...value.outputs].some(s => !ITEMS[s.item] || !Number.isSafeInteger(s.amount) || s.amount <= 0))
+        !value.requires.length || [...value.inputs, ...value.outputs].some(s => !materials.items[s.item] || !Number.isSafeInteger(s.amount) || s.amount <= 0))
         throw new Error(`Receita de processamento inválida: ${value.id}`);
       if (!value.inputs.length || !value.outputs.length || new Set(value.inputs.map(s => s.item)).size !== value.inputs.length ||
         [value.conditions?.minTemperature, value.conditions?.maxTemperature].some(n => n !== undefined && !Number.isFinite(n)) ||
@@ -73,16 +74,16 @@ export interface ProductionDefinitions {
   fuels: readonly FuelDefinition[];
 }
 
-export function compileProduction(definitions: ProductionDefinitions) {
-  const stationRegistry = new StationRegistry(definitions.stations);
-  const processingRecipes = new ProcessingRecipeRegistry(definitions.processes);
+export function compileProduction(definitions: ProductionDefinitions, materials = installedMaterials) {
+  const stationRegistry = new StationRegistry(definitions.stations, materials);
+  const processingRecipes = new ProcessingRecipeRegistry(definitions.processes, materials);
   const reachable = new Set(stationRegistry.values().filter(s => s.mode === 'processing')
     .flatMap(s => processingRecipes.compatible(s).map(r => r.id)));
   for (const recipe of definitions.processes)
     if (!reachable.has(recipe.id)) throw new Error('Processo sem estação compatível: ' + recipe.id);
   const fuels = new Map<string, FuelDefinition>();
   for (const value of definitions.fuels) {
-    if (!Object.hasOwn(ITEMS, value.item) || fuels.has(value.item) ||
+    if (!Object.hasOwn(materials.items, value.item) || fuels.has(value.item) ||
         !Number.isFinite(value.burnDuration) || value.burnDuration <= 0 ||
         !Number.isFinite(value.targetTemperature) || value.targetTemperature < 20) throw new Error('Combustível inválido: ' + value.item);
     fuels.set(value.item, value);

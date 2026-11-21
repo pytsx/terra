@@ -1,5 +1,5 @@
 import { RNG } from '../../shared/math';
-import { CURRENT_GENERATION } from '../catalog';
+import { B, CURRENT_GENERATION } from '../catalog';
 import { scatterAssets, oreDepositFeatures, treeFeatures, terrainMaterialFeature } from '../../assets/generation';
 import { compileSurfaceScatter } from './SurfaceScatter';
 import { AquiferGenerator } from './AquiferGenerator';
@@ -32,12 +32,12 @@ export const terrainPipeline = new GenerationPipeline([
 export const modernPipeline = new GenerationPipeline([climateGenerator, ...terrainPipeline.stages]);
 
 export function createGenerationContext(
-  input: Omit<GenerationContext, 'climate' | 'rng' | 'startY' | 'endY' | 'generationVersion'> &
-    { generationVersion?: number },
+  input: Omit<GenerationContext, 'climate' | 'rng' | 'startY' | 'endY' | 'keys' | 'generationVersion'> &
+    { generationVersion?: number; keys?: typeof B },
   rngSeed = input.seed,
 ): GenerationContext {
   return {
-    ...input,
+    keys: B, ...input,
     generationVersion: input.generationVersion ?? CURRENT_GENERATION,
     startY: 0, endY: input.height,
     climate: Array.from({ length: input.width }, (): ClimateSample => ({

@@ -1,14 +1,9 @@
+import { placement } from './content/Materials';
 import { defineCommand, exposeCommand } from './commands/DomainCommand';
 import { DroppedItems } from './entities/DroppedItems';
 import { tracePlacement, traceTool } from './toolTarget';
 import {
-  B,
-  BLOCKS,
-  ITEMS,
   BELT_SIZE,
-  BLOCK_SCRIPTS,
-  ITEM_ASSETS,
-  placedTile,
   TILE,
   type SlotRef,
 } from './catalog';
@@ -57,11 +52,10 @@ export type GameEvent =
   | { type: 'impact'; position: Point; block: number }
   | { type: 'entityHit'; position: Point }
   | { type: 'mineHit'; position: Point; block: number; tx: number; ty: number };
-const lightItems = Object.keys(ITEMS).filter((id) => ITEMS[id].tool?.role === 'light');
-const upgradedPicks = Object.keys(ITEMS).filter((id) =>
-  ITEMS[id].tool?.role === 'mining' && (ITEMS[id].tool?.miningMultiplier ?? 1) > 1);
 
 export class Expedition {
+  private readonly lightItems: string[];
+  private readonly upgradedPicks: string[];
   private readonly terrain: World;
   private readonly explorer: Explorer;
   private readonly bag: Inventory;
@@ -121,7 +115,10 @@ export class Expedition {
   constructor(options: string | { seed: string; content: RuntimeContent }, save?: ExpeditionSave) {
     const seed = typeof options === 'string' ? options : options.seed;
     this.content = typeof options === 'string' ? defaultContent : options.content;
-    this.processing = new ProcessingSystem(this.content.stations, this.content.processes, this.content.fuels);
+    const items = this.content.materials.items;
+    this.lightItems = Object.keys(items).filter(id => items[id].tool?.role === 'light');
+    this.upgradedPicks = Object.keys(items).filter(id => items[id].tool?.role === 'mining' && (items[id].tool?.miningMultiplier ?? 1) > 1);
+    this.processing = new ProcessingSystem(this.content.stations, this.content.processes, this.content.fuels, this.content.materials);
     this.terrain = new World(
       seed.trim().slice(0, 40) || 'AURORA-1264',
       save?.generationVersion, this.content,
@@ -141,7 +138,7 @@ export class Expedition {
       new CommandBus<WeatherCommandContext & PlacementCommandContext>(this),
     ));
     this.explore();
-    this.bag = new Inventory(save?.slots, save?.equipment, this.content.recipes);
+    this.bag = new Inventory(save?.slots, save?.equipment, this.content.recipes, this.content.materials);
     this.explorer.syncMaxLife(this.bag.maxLife(), !save);
     this.selected = save?.selected ?? 0;
     this.elapsed = save?.elapsed ?? 0;
@@ -253,7 +250,7 @@ export class Expedition {
     const definition = this.content.stations.get(station.definitionId)!;
     const copy = (slots: StationInstance['input']) => slots.map(s => s ? { ...s } : null);
     return {
-      id: station.id, name: definition.name, definitionId: definition.id, block: B[definition.block],
+      id: station.id, name: definition.name, definitionId: definition.id, block: this.content.materials.keys[definition.block],
       input: copy(station.input), output: copy(station.output), fuel: copy(station.fuel),
       enabled: station.enabled, manual: definition.energy.type === 'manual', energy: definition.energy.type,
       status: this.processing.status(station), manualWork: station.manualWork,
@@ -263,7 +260,7 @@ export class Expedition {
       burningFuel: station.energyState.burningFuel ? { ...station.energyState.burningFuel } : null,
       selectedRecipe: station.selectedRecipe,
       recipes: this.content.processes.compatible(definition).map(r => ({
-        id: r.id, name: ITEMS[r.outputs[0].item].name,
+        id: r.id, name: this.content.materials.items[r.outputs[0].item].name,
       })),
     };
   }
@@ -403,7 +400,7 @@ export class Expedition {
       this.bag.changeGrid(2);
       return true;
     }
-    const result = BLOCK_SCRIPTS[target.id].placed.onInteract?.({ x: target.tx, y: target.ty });
+    const result = this.content.materials.blockScripts[target.id].placed.onInteract?.({ x: target.tx, y: target.ty });
     if (
       typeof result !== 'object' ||
       result === null ||
@@ -437,7 +434,7 @@ export class Expedition {
     ));
     this.events.push({
       type: 'message',
-      text: `${ITEMS[unresolved.item].name} foi solto porque o inventário está cheio.`,
+      text: `${this.content.materials.items[unresolved.item].name} foi solto porque o inventário está cheio.`,
     });
   }
   dropSelected() {
@@ -453,7 +450,7 @@ export class Expedition {
     this.commands.run(this.actions.spawnDrop({
       ...held, amount: 1, x: p.x + p.w / 2 + p.face * 18, y: p.y + p.h - 10,
     }, p.face * 80, -70, 0.35));
-    this.events.push({ type: 'message', text: `Soltou ${ITEMS[held.item].name}.` });
+    this.events.push({ type: 'message', text: `Soltou ${this.content.materials.items[held.item].name}.` });
     return true;
   }
   consumeSelected() {
@@ -462,7 +459,7 @@ export class Expedition {
   private performConsumeSelected() {
     const held = this.bag.at(this.selected);
     if (!held) return false;
-    const asset = ITEMS[held.item];
+    const asset = this.content.materials.items[held.item];
     if (!asset.use) {
       this.events.push({ type: 'message', text: `${asset.name} não pode ser consumido.` });
       return false;
@@ -481,7 +478,7 @@ export class Expedition {
   private performInteractEntity(aim: Point) {
     const hit = this.aimedContact(aim);
     const held = this.bag.at(this.selected)?.item;
-    const transfer = held && ITEMS[held].waterTransfer;
+    const transfer = held && this.content.materials.items[held].waterTransfer;
     if (transfer) {
       const x = Math.floor(aim.x / TILE), y = Math.floor(aim.y / TILE), p = this.player;
       if (Math.hypot(aim.x - p.x - p.w / 2, aim.y - p.y - p.h / 2) > TILE * 5.35 ||
@@ -492,14 +489,14 @@ export class Expedition {
       }
       return true;
     }
-    if (hit?.kind === 'block' && BLOCKS[hit.id].toggle) {
-      this.terrain.set(hit.tx, hit.ty, B[BLOCKS[hit.id].toggle!]);
+    if (hit?.kind === 'block' && this.content.materials.blocks[hit.id].toggle) {
+      this.terrain.set(hit.tx, hit.ty, this.content.materials.keys[this.content.materials.blocks[hit.id].toggle!]);
       return true;
     }
-    const tilled = hit?.kind === 'block' && BLOCKS[hit.id].tilledBlock;
-    if (held && ITEMS[held].tool?.role === 'till' && hit?.kind === 'block' && tilled &&
-      this.terrain.get(hit.tx, hit.ty - 1) === B.AIR) {
-      this.terrain.set(hit.tx, hit.ty, B[tilled]);
+    const tilled = hit?.kind === 'block' && this.content.materials.blocks[hit.id].tilledBlock;
+    if (held && this.content.materials.items[held].tool?.role === 'till' && hit?.kind === 'block' && tilled &&
+      this.terrain.get(hit.tx, hit.ty - 1) === this.content.materials.keys.AIR) {
+      this.terrain.set(hit.tx, hit.ty, this.content.materials.keys[tilled]);
       this.wearHeldTool();
       this.events.push({ type: 'message', text: 'Solo preparado para o plantio.' });
       return true;
@@ -526,7 +523,7 @@ export class Expedition {
       const x = this.world.infinite ? candidate : clamp(candidate, 7, this.world.width - 8);
       const y = this.world.heightAt(x) - 2;
       if (
-        this.world.get(x, y) === B.AIR &&
+        this.world.get(x, y) === this.content.materials.keys.AIR &&
         !this.mobs.some((m) => Math.abs(m.view().x / TILE - x) < 5)
       ) {
         const pool = this.content.entities.spawnPool(this.world.get(x, y + 2), this.world.biomeAt(x));
@@ -568,16 +565,16 @@ export class Expedition {
     const reachable = trace.reachable && trace.support !== null;
     const held = this.bag.at(this.selected)?.item;
     const item = held;
-    const tile = item ? placedTile(item) : undefined;
+    const tile = item ? placement(this.content.materials, item) : undefined;
     const block = this.world.get(tx, ty);
     const intersects = x < p.x + p.w && x + TILE > p.x && y < p.y + p.h && y + TILE > p.y;
     const canPlace =
-      (tile === undefined || !BLOCKS[tile].support || this.terrain.get(tx, ty + 1) === B[BLOCKS[tile].support!]) &&
+      (tile === undefined || !this.content.materials.blocks[tile].support || this.terrain.get(tx, ty + 1) === this.content.materials.keys[this.content.materials.blocks[tile].support!]) &&
       reachable &&
-      (block === B.AIR || block === B.WATER) &&
+      (block === this.content.materials.keys.AIR || block === this.content.materials.keys.WATER) &&
       tile !== undefined &&
       item !== undefined &&
-      (!BLOCKS[tile].solid || !intersects) &&
+      (!this.content.materials.blocks[tile].solid || !intersects) &&
       this.adjacent(tx, ty);
     return {
       tx,
@@ -605,7 +602,7 @@ export class Expedition {
   private wearHeldTool() {
     const result = this.bag.wearSelected(this.selected);
     if (result?.broken)
-      this.events.push({ type: 'message', text: `${ITEMS[result.item].name} quebrou.` });
+      this.events.push({ type: 'message', text: `${this.content.materials.items[result.item].name} quebrou.` });
   }
   private place(tx: number, ty: number, tile: number, item: string, slot?: number) {
     return this.commands.run(this.actions.place(tx, ty, tile, item, slot));
@@ -622,7 +619,7 @@ export class Expedition {
     return this.commands.run(this.actions.quickPlace());
   }
   private performQuickPlace() {
-    const quick = Object.entries(ITEM_ASSETS).find(([, asset]) =>
+    const quick = Object.entries(this.content.materials.itemAssets).find(([, asset]) =>
       'place' in asset.config ? asset.config.place.quickPlace : false,
     );
     if (!quick) return;
@@ -633,7 +630,7 @@ export class Expedition {
     }
     const blockKey = 'place' in itemAsset.config ? itemAsset.config.place.block : undefined;
     if (!blockKey) return;
-    const tile = B[blockKey as keyof typeof B];
+    const tile = this.content.materials.keys[blockKey];
     if (tile === undefined) return;
     const p = this.player,
       x = Math.floor((p.x + p.w / 2) / TILE),
@@ -644,7 +641,7 @@ export class Expedition {
           ty = y + dy;
         if (
           this.terrain.inside(tx, ty) &&
-          this.world.get(tx, ty) === B.AIR &&
+          this.world.get(tx, ty) === this.content.materials.keys.AIR &&
           this.adjacent(tx, ty)
         ) {
           this.place(tx, ty, tile, itemId);
@@ -658,7 +655,7 @@ export class Expedition {
   }
   private toolRay(aim: Point) {
     const held = this.bag.at(this.selected);
-    const item = held ? ITEMS[held.item] : undefined;
+    const item = held ? this.content.materials.items[held.item] : undefined;
     const stats = item?.hit ?? item?.tool?.hit ?? { damage: 1, reach: 34, cooldown: 0.42 };
     const ray = traceTool(this.terrain, this.player, aim, stats.reach, this.mobs);
     const multiplier = item?.tool?.miningMultiplier ?? 1;
@@ -666,7 +663,7 @@ export class Expedition {
     let secondsLeft: number | null = null;
     if (ray.hit?.kind === 'block') {
       const { id, tx, ty } = ray.hit,
-        block = BLOCKS[id];
+        block = this.content.materials.blocks[id];
       if (block.hardness !== null && tier >= (block.mineTier ?? 1))
         secondsLeft = ((1 - this.terrain.damageAt(tx, ty)) * block.hardness) / multiplier;
     }
@@ -710,7 +707,7 @@ export class Expedition {
       return;
     }
     const { tx, ty, id } = hit,
-      block = BLOCKS[id];
+      block = this.content.materials.blocks[id];
     if (secondsLeft === null) return;
     if (!this.swing || this.swing.item !== (this.bag.at(this.selected)?.item ?? ''))
       this.swingTool(angle, 0.20);
@@ -719,8 +716,8 @@ export class Expedition {
     const position = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE };
     if (after === 1) {
       if (block.bonusDrop) this.commands.run(this.actions.spawnDrop({ ...block.bonusDrop, ...position }, 0, -32));
-      if (block.spentSoil && BLOCKS[this.terrain.get(tx, ty + 1)].fertile)
-        this.terrain.set(tx, ty + 1, B[block.spentSoil]);
+      if (block.spentSoil && this.content.materials.blocks[this.terrain.get(tx, ty + 1)].fertile)
+        this.terrain.set(tx, ty + 1, this.content.materials.keys[block.spentSoil]);
       if (block.drop) this.commands.run(this.actions.spawnDrop({ item: block.drop, amount: 1, ...position }, 0, -32));
       this.wearHeldTool();
       this.impact(position.x, position.y, id);
@@ -779,7 +776,7 @@ export class Expedition {
         return overlaps(p) || activeMobs.some((m) => overlaps(m.view()));
       },
       (block, tx, ty) => {
-        const item = BLOCKS[block].drop;
+        const item = this.content.materials.blocks[block].drop;
         if (item)
           this.commands.run(this.actions.spawnDrop({ item, amount: 1, x: (tx + 0.5) * TILE, y: ty * TILE - 6 }, 0, -45));
       },
@@ -787,7 +784,7 @@ export class Expedition {
     this.processing.step(dt, this.stations.active(region), this.waterFlow);
     this.drops.step(dt, this.terrain, p, ({ item, amount, durability }) => {
       this.commands.run(this.actions.collect(item, amount, durability));
-      this.events.push({ type: 'message', text: `Recolheu ${amount} × ${ITEMS[item].name}.` });
+      this.events.push({ type: 'message', text: `Recolheu ${amount} × ${this.content.materials.items[item].name}.` });
     }, drop => region.intersects({ ...drop, w: 10, h: 10 }));
     for (const mob of activeMobs) {
       if (mob.step(dt, this.terrain, p, this.rng, activeMobs, this.elapsed)) {
@@ -796,7 +793,7 @@ export class Expedition {
           const broken = this.bag.wearArmor();
           this.explorer.syncMaxLife(this.bag.maxLife());
           for (const item of broken)
-            this.events.push({ type: 'message', text: `${ITEMS[item].name} quebrou.` });
+            this.events.push({ type: 'message', text: `${this.content.materials.items[item].name} quebrou.` });
         }
         if (result === 'respawn')
           this.events.push({ type: 'message', text: 'Você voltou ao acampamento.' });
@@ -843,7 +840,7 @@ export class Expedition {
   }
   scene(aim: Point) {
     const held = this.bag.at(this.selected)?.item;
-    const heldName = held ? ITEMS[held].name : 'Mão livre',
+    const heldName = held ? this.content.materials.items[held].name : 'Mão livre',
       heldIcon = held ?? '';
     const { hit, angle, secondsLeft } = this.toolRay(aim);
     const playerTileX = Math.floor((this.player.x + this.player.w / 2) / TILE);
@@ -870,7 +867,7 @@ export class Expedition {
             nutrition: hit.kind === 'entity' ? hit.entity.view().nutrition : undefined,
             name:
               hit.kind === 'block'
-                ? BLOCKS[hit.id].name
+                ? this.content.materials.blocks[hit.id].name
                 : this.content.entities.asset(String(hit.entity.view().kind))?.config.name ?? String(hit.entity.view().kind),
           }
         : null,
@@ -880,8 +877,8 @@ export class Expedition {
       drops: this.drops.visible,
       heldName,
       heldIcon,
-      lantern: lightItems.some((id) => this.bag.count(id) > 0),
-      copperPick: upgradedPicks.some((id) => this.bag.count(id) > 0),
+      lantern: this.lightItems.some((id) => this.bag.count(id) > 0),
+      copperPick: this.upgradedPicks.some((id) => this.bag.count(id) > 0),
     };
   }
   save(): ExpeditionSave {

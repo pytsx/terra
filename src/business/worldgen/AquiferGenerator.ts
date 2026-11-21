@@ -1,4 +1,3 @@
-import { B } from '../catalog';
 import { FractalNoise } from './noise';
 import type { GenerationContext, WorldGenerator } from './types';
 
@@ -14,9 +13,9 @@ export class AquiferGenerator implements WorldGenerator {
       const localLevel = 164 + Math.round(levels.sample(gx * 0.006) * 10);
       for (let y = Math.max(context.startY, context.surface[x] + 30, localLevel);
         y < Math.min(context.endY, context.height - 4); y++) {
-        if (context.get(x, y) !== B.AIR) continue;
+        if (context.get(x, y) !== context.keys.AIR) continue;
         const lava = y > context.height - 20 && fluid.sample(gx * 0.025, y * 0.03) > 0.12;
-        context.set(x, y, lava ? B.LAVA : B.WATER);
+        context.set(x, y, lava ? context.keys.LAVA : context.keys.WATER);
       }
     }
   }

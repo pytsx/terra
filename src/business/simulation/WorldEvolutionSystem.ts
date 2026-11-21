@@ -1,7 +1,7 @@
 import { hashText, mixHash } from '../../shared/math';
 import type { World } from '../world/World';
 import { featureGenerator } from '../worldgen/FeatureGenerator';
-import { B, BLOCKS, CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
+import { CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
 import { blockPartitionAt } from './BlockPartitionScheduler';
 import type { SimulationRegion } from './SimulationRegion';
 import { TransformationEvaluator } from './TransformationEvaluator';
@@ -99,11 +99,11 @@ export class WorldEvolutionSystem {
         break;
       }
       const previous = this.state.get(x, y, rule.id);
-      const support = BLOCKS[block].support;
+      const support = world.materials.blocks[block].support;
       const soil = support ? world.get(x, y + 1) : undefined;
       const evaluation = this.evaluator.evaluate(rule, {
         matureTree: () => world.isMatureTreeBase(x, y),
-        soilMoisture: support && soil !== undefined && (soil === B[support] || BLOCKS[soil].fertile)
+        soilMoisture: support && soil !== undefined && (soil === world.materials.keys[support] || world.materials.blocks[soil].fertile)
           ? world.waterStateAt(x, y + 1).saturation : 0,
         water: world.waterStateAt(x, y, block),
         environment: { exposedToSky: world.exposedToSky(x, y) },

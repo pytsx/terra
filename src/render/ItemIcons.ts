@@ -1,14 +1,15 @@
-import { ITEMS, placedTile } from '../business';
-import { modularItems } from '../assets';
+import { placement } from '../business/content/Materials';
+
 import type { Atlas } from './Atlas';
 import { node } from './elements';
 export class ItemIcons {
   constructor(private readonly atlas: Atlas) {}
+  get materials() { return this.atlas.content.materials; }
   item(id: string) {
-    const tile = placedTile(id),
-      item = ITEMS[id];
+    const tile = placement(this.materials, id),
+      item = this.materials.items[id];
     if (tile !== undefined) return this.draw(tile);
-    const asset = modularItems[id as keyof typeof modularItems];
+    const asset = this.materials.itemAssets[id];
     if (asset?.script.renderInventory) {
       const icon = node('canvas', undefined, 'item-icon');
       icon.width = icon.height = 30;

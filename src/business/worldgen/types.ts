@@ -10,6 +10,7 @@ export interface ClimateSample {
 }
 
 export interface GenerationContext {
+  readonly keys: Readonly<Record<string, number>>;
   readonly generationVersion: number;
   readonly landscape?: import('./Landscape').Landscape;
   readonly seed: number;

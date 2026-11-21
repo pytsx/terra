@@ -13,7 +13,7 @@ export class Landscape {
   private readonly biomes: string[] = [];
   readonly climate: ClimateSample[];
 
-  constructor(seed: number, origin: number, width: number, version = CURRENT_GENERATION) {
+  constructor(seed: number, origin: number, width: number, version = CURRENT_GENERATION, content = { baseBiomes, biomeVariants }) {
     this.elevations = new Int16Array(width + this.margin * 2);
     const samples: ClimateSample[] = [];
     new ClimateGenerator().generate({
@@ -28,9 +28,9 @@ export class Landscape {
       const relief = slope * (32 + 12 * rand01(range, 2, seed) + 12 * noise1(x / 22, seed));
       const arid = climate.temperature > 0.1 && climate.humidity < -0.03;
       const forest = climate.humidity + noise1(x / 105, seed ^ 673) * 0.8 > 0.33;
-      const parent = baseBiomes.find(b => (b.reliefAbove === undefined || relief > b.reliefAbove) &&
+      const parent = content.baseBiomes.find(b => (b.reliefAbove === undefined || relief > b.reliefAbove) &&
         (!b.arid || arid) && (!b.forested || forest))!.name;
-      this.biomes[i] = biomeVariants.find(b => version >= b.sinceGeneration &&
+      this.biomes[i] = content.biomeVariants.find(b => version >= b.sinceGeneration &&
         b.parent === parent && climate.humidity >= b.minHumidity)?.name ?? parent;
       const dunes = arid ? 5 * noise1(x / 18, seed ^ 893) : 0;
       this.elevations[i] = clamp(Math.round(10 + this.elevations[i] * 0.94 - relief - dunes), 14, 116);

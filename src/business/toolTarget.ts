@@ -1,4 +1,4 @@
-import { B, TILE } from './catalog';
+import { TILE } from './catalog';
 import type { ActorView } from './entities/Actor';
 import type { EngineEntity } from './entities/EntityRegistry';
 import type { TerrainView } from './world/World';
@@ -55,7 +55,7 @@ export function traceTool(
     ) {
       if ((!world.infinite && (tx < 0 || tx >= world.width)) || ty < 0 || ty >= world.height) continue;
       const id = world.get(tx, ty);
-      if (id === B.AIR || id === B.WATER) continue;
+      if (id === world.materials.keys.AIR || id === world.materials.keys.WATER) continue;
       const bounds = { x: tx * TILE, y: ty * TILE, w: TILE, h: TILE };
       const d = entry(origin, dir, bounds);
       if (d <= distance) {
@@ -138,7 +138,7 @@ function traceApproachedPlacement(
         const tx = sx + fx, ty = sy + fy;
         if (ty < 0 || ty >= world.height || (!world.infinite && (tx < 0 || tx >= world.width))) continue;
         const block = world.get(tx, ty);
-        if (block !== B.AIR && block !== B.WATER) continue;
+        if (block !== world.materials.keys.AIR && block !== world.materials.keys.WATER) continue;
         const x = tx * TILE, y = ty * TILE;
         if (x < player.x + player.w && x + TILE > player.x &&
           y < player.y + player.h && y + TILE > player.y) continue;

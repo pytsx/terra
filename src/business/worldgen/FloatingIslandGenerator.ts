@@ -1,4 +1,3 @@
-import { B } from '../catalog';
 import { FractalNoise } from './noise';
 import type { GenerationContext, WorldGenerator } from './types';
 
@@ -20,7 +19,7 @@ export class FloatingIslandGenerator implements WorldGenerator {
         for (let y = top; y <= bottom; y++) {
           const edge = Math.abs(dx) / radius + (y - top) / (thickness + 1);
           if (edge > 1.35) continue;
-          context.set(x + dx, y, y === top ? B.GRASS : y < top + 3 ? B.DIRT : B.STONE);
+          context.set(x + dx, y, y === top ? context.keys.GRASS : y < top + 3 ? context.keys.DIRT : context.keys.STONE);
         }
       }
       x += radius * 2;

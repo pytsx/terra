@@ -1,37 +1,14 @@
 import { InventoryControls } from './InventoryControls';
-import { GameService, BELT_SIZE, ITEMS, TILE } from '../business';
+import { GameService, BELT_SIZE, TILE } from '../business';
 import { buildBagModel } from './BagModel';
 import { createViews, element, type Views } from '../render';
 import { Input } from './Input';
 import { PerformanceMonitor } from './PerformanceMonitor';
 type Panel = 'menu' | 'inventory' | 'help' | 'new-world' | 'world-map';
 export class Application {
-  private readonly views: Views = createViews();
-  private readonly input = new Input(
-    this.views.canvas,
-    () => !this.panel && !this.terminalOpen,
-    () => {
-      const held = this.game.inventory.slots[this.game.slot];
-      if (!held || !ITEMS[held.item].use) return false;
-      const consumed = this.game.consumeSelected();
-      if (consumed) this.refresh();
-      return consumed;
-    },
-    () => {
-      if (this.game.interactEntity(this.aim())) {
-        this.refresh();
-        return true;
-      }
-      if (!this.game.openWorkbench(this.aim())) return false;
-      this.setPanel('inventory');
-      return true;
-    },
-  );
-  private readonly inventoryControls = new InventoryControls(
-    () => this.game,
-    () => this.refresh(),
-    this.views.bag,
-  );
+  private readonly views: Views;
+  private readonly input: Input;
+  private readonly inventoryControls: InventoryControls;
   private panel: Panel | null = null;
   private terminalOpen = false;
   private readonly commandHistory: string[] = [];
@@ -44,6 +21,33 @@ export class Application {
   private autoSave: boolean;
   private readonly performance = new PerformanceMonitor();
   constructor(private readonly service: GameService) {
+    this.views = createViews(service.game.content);
+    this.input = new Input(
+      this.views.canvas,
+      () => !this.panel && !this.terminalOpen,
+      () => {
+        const held = this.game.inventory.slots[this.game.slot];
+        if (!held || !this.game.content.materials.items[held.item].use) return false;
+        const consumed = this.game.consumeSelected();
+        if (consumed) this.refresh();
+        return consumed;
+      },
+      () => {
+        if (this.game.interactEntity(this.aim())) {
+          this.refresh();
+          return true;
+        }
+        if (!this.game.openWorkbench(this.aim())) return false;
+        this.setPanel('inventory');
+        return true;
+      },
+    );
+    this.inventoryControls = new InventoryControls(
+      () => this.game,
+      () => this.refresh(),
+      this.views.bag,
+    );
+  
     this.autoSave = !service.loadFailed;
     this.views.world.reset(this.game.player, this.game.world, this.game.magnification);
     this.bind();

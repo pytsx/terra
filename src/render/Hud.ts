@@ -1,4 +1,4 @@
-import { BELT_SIZE, ITEMS, TILE, type Scene, type Slot } from '../business';
+import { BELT_SIZE, TILE, type Scene, type Slot } from '../business';
 import { element, node } from './elements';
 import type { ItemIcons } from './ItemIcons';
 export class Hud {
@@ -37,7 +37,7 @@ export class Hud {
     );
     element('menuSeed').textContent = scene.world.seed;
     element('zoomLabel').textContent = Math.round(scene.zoom * 100) + '%';
-    const label = (id: string) => ITEMS[id].name;
+    const label = (id: string) => this.icons.materials.items[id].name;
     element('selectedName').textContent = scene.heldName;
     for (const button of element('hotbar').querySelectorAll<HTMLButtonElement>('button')) {
       const index = Number(button.dataset.slot),

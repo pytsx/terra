@@ -15,11 +15,11 @@ export class TerrainColumn {
   readonly landscape?: Landscape;
 
   constructor(private readonly seed: number, cx: number, private readonly height: number,
-    private readonly spawnX: number, private readonly version: number, private readonly terrain = terrainPipeline) {
+    private readonly spawnX: number, private readonly version: number, private readonly terrain = terrainPipeline, private readonly keys = B, biomes?: ConstructorParameters<typeof Landscape>[4]) {
     this.originX = cx * W;
     this.rngSeed = mixHash(seed, cx, 0x4c11);
     if (version >= 4) {
-      this.landscape = new Landscape(seed, this.originX, W, version);
+      this.landscape = new Landscape(seed, this.originX, W, version, biomes);
       this.climate = this.landscape.climate;
       for (let x = 0; x < W; x++) this.surface[x] = this.landscape.height(x);
     } else climateGenerator.generate({
@@ -37,12 +37,12 @@ export class TerrainColumn {
     const endY = top <= this.maxSurface ? Math.max(bottom, this.maxSurface + 1) : bottom;
     const cells = new Uint16Array((endY - startY) * W);
     this.terrain.run({
-      landscape: this.landscape, seed: this.seed, width: W, height: this.height, originX: this.originX,
+      keys: this.keys, landscape: this.landscape, seed: this.seed, width: W, height: this.height, originX: this.originX,
       generationVersion: this.version,
       spawnX: this.spawnX - this.originX, climate: this.climate, surface: this.surface,
       globalX: (x) => this.originX + x, rng: new RNG(this.rngSeed), startY, endY,
-      get: (x, y) => y < 0 ? B.AIR : x < 0 || x >= W || y < startY || y >= endY
-        ? B.BEDROCK : cells[(y - startY) * W + x],
+      get: (x, y) => y < 0 ? this.keys.AIR : x < 0 || x >= W || y < startY || y >= endY
+        ? this.keys.BEDROCK : cells[(y - startY) * W + x],
       set: (x, y, id) => {
         if (x >= 0 && x < W && y >= startY && y < endY) cells[(y - startY) * W + x] = id;
       },

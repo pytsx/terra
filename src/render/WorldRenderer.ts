@@ -8,17 +8,13 @@ import { Atlas } from './Atlas';
 import { ImpactParticles } from './ImpactParticles';
 
 import {
-  B,
-  BLOCKS,
-  ITEMS,
-  placedTile,
   TILE,
   type Scene,
   type GameEvent,
   type Point,
 } from '../business';
 import { clamp, rand01, mixHash, RNG } from '../shared/math';
-import { modularEntities, modularItems } from '../assets';
+import { placement } from '../business/content/Materials';
 const crackSegments = [
   [12, 1, 10, 7],
   [10, 7, 15, 12],
@@ -82,11 +78,11 @@ export class WorldRenderer {
         life: 0.1,
         block: event.block,
       };
-      this.particles.burst(7, event.position.x, event.position.y, BLOCKS[event.block].color);
+      this.particles.burst(7, event.position.x, event.position.y, this.atlas.content.materials.blocks[event.block].color);
       return;
     }
     this.impactFlash = { x: event.position.x, y: event.position.y, life: 0.12, block: event.block };
-    this.particles.burst(10, event.position.x, event.position.y, BLOCKS[event.block].color);
+    this.particles.burst(10, event.position.x, event.position.y, this.atlas.content.materials.blocks[event.block].color);
   }
   animate(dt: number) {
     if (this.impactFlash) this.impactFlash.life -= dt;
@@ -134,7 +130,7 @@ export class WorldRenderer {
         if (!id && !water) continue;
         const sx = Math.floor(x * TILE - this.cam.x),
           sy = Math.floor(y * TILE - this.cam.y);
-        if (id && id !== B.WATER) this.atlas.tile(c, id, sx, sy, mixHash(x, y, this.scene.world.h) % 4);
+        if (id && id !== this.atlas.content.materials.keys.WATER) this.atlas.tile(c, id, sx, sy, mixHash(x, y, this.scene.world.h) % 4);
         const machine = this.scene.stationVisualAt(x, y);
         if (machine?.burning) {
           const flicker = Math.floor(this.scene.elapsed * 12) % 3;
@@ -147,7 +143,7 @@ export class WorldRenderer {
           c.fillRect(sx + 11 + Math.round(Math.cos(angle) * 5), sy + 12 + Math.round(Math.sin(angle) * 4), 4, 3);
         }
         if (water) {
-          const capacity = BLOCKS[id].waterCapacity;
+          const capacity = this.atlas.content.materials.blocks[id].waterCapacity;
           if (capacity) {
             c.fillStyle = `rgba(24, 42, 58, ${0.4 * Math.min(1, water / capacity)})`;
             c.fillRect(sx, sy, TILE, TILE);
@@ -169,10 +165,10 @@ export class WorldRenderer {
         }
         const damage = this.scene.world.damageAt(x, y);
         if (damage > 0) this.drawBlockCracks(c, sx, sy, damage);
-        const block = BLOCKS[id];
+        const block = this.atlas.content.materials.blocks[id];
         if (block.light)
           lights.push({ x: sx + 12, y: sy + (block.light.offsetY ?? 12), light: block.light });
-        if (block.foliage && this.scene.world.get(x, y - 1) === B.AIR) {
+        if (block.foliage && this.scene.world.get(x, y - 1) === this.atlas.content.materials.keys.AIR) {
           const r = rand01(x, y, this.scene.world.h);
           if (r > 0.7) {
             c.fillStyle = block.foliage;
@@ -191,7 +187,7 @@ export class WorldRenderer {
     for (const s of this.scene.mobs) {
       if (s.x + s.w + TILE < viewLeft || s.x - TILE > viewLeft + viewWidth ||
         s.y + s.h + TILE < viewTop || s.y - TILE > viewTop + viewHeight) continue;
-      const asset = modularEntities[String(s.kind) as keyof typeof modularEntities];
+      const asset = this.atlas.content.entities.asset(String(s.kind));
       asset?.script.render?.(c, {
         ...s,
         x: s.x - this.cam.x,
@@ -203,17 +199,17 @@ export class WorldRenderer {
         drop.y + TILE < viewTop || drop.y - TILE > viewTop + viewHeight) continue;
       const x = Math.floor(drop.x - this.cam.x),
         y = Math.floor(drop.y - this.cam.y);
-      const tile = placedTile(drop.item);
+      const tile = placement(this.atlas.content.materials, drop.item);
       c.save();
       c.translate(x, y + Math.sin(this.scene.elapsed * 4 + drop.x) * 1.5);
       c.rotate(-0.18 + Math.sin(this.scene.elapsed * 2 + drop.y) * 0.04);
       if (tile !== undefined) this.atlas.tile(c, tile, -12, -12);
       else {
-        const asset = modularItems[drop.item as keyof typeof modularItems];
+        const asset = this.atlas.content.materials.itemAssets[drop.item];
         if (asset?.script.renderDropped) {
           asset.script.renderDropped(c);
         } else {
-          c.fillStyle = ITEMS[drop.item].color ?? '#c7bd91';
+          c.fillStyle = this.atlas.content.materials.items[drop.item].color ?? '#c7bd91';
           c.fillRect(-6, -6, 12, 12);
         }
       }
@@ -267,7 +263,7 @@ export class WorldRenderer {
       c.save();
       c.translate(x + 9, y + 18);
       c.rotate(angle);
-      const heldAsset = modularItems[swing.item as keyof typeof modularItems];
+      const heldAsset = this.atlas.content.materials.itemAssets[swing.item];
       if (heldAsset && 'renderHeld' in heldAsset.script && typeof heldAsset.script.renderHeld === 'function') {
         heldAsset.script.renderHeld(c);
       } else if (!swing.item) {
@@ -301,7 +297,7 @@ export class WorldRenderer {
   private drawTarget(c: CanvasRenderingContext2D) {
     const t = this.scene.target;
     if (this.paused) return;
-    if (!this.scene.swing && t.reachable && t.block === B.AIR && t.tile !== undefined) {
+    if (!this.scene.swing && t.reachable && t.block === this.atlas.content.materials.keys.AIR && t.tile !== undefined) {
       c.save();
       c.globalAlpha = t.canPlace ? 0.55 : 0.22;
       this.atlas.tile(c, t.tile, t.tx * TILE - this.cam.x, t.ty * TILE - this.cam.y);
@@ -374,8 +370,8 @@ export class WorldRenderer {
     for (let col = 0; col < cols; col += columnStride)
       for (let row = 0; row < rows; row += stride) {
         const id = world.mapPeek(left + col, top + row);
-        if (id === undefined || id === B.AIR) continue;
-        ctx.fillStyle = BLOCKS[id].color;
+        if (id === undefined || id === this.atlas.content.materials.keys.AIR) continue;
+        ctx.fillStyle = this.atlas.content.materials.blocks[id].color;
         ctx.fillRect(
           Math.floor(offsetX + col * scale),
           Math.floor(offsetY + row * scale),

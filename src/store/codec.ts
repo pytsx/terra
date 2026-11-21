@@ -1,4 +1,4 @@
-import { ARMOR_SLOTS, BLOCKS, ITEMS, BELT_SIZE, TILE, WORLD_H, WORLD_W, CURRENT_GENERATION, type Slot } from '../business/catalog';
+import { ARMOR_SLOTS, BELT_SIZE, TILE, WORLD_H, WORLD_W, CURRENT_GENERATION, type Slot } from '../business/catalog';
 import { startingSlots } from '../business/inventory/Inventory';
 import type { BlockDamage, DroppedSave, EntityRegionSave, EntitySave, ExpeditionSave, ExploredSection, TileEdit, TransformationStateRecord } from '../business/save';
 import { defaultContent } from '../assets/runtime';
@@ -13,13 +13,13 @@ function object(value: unknown): Record<string, unknown> {
 function numeric(value: unknown, fallback: number, min: number, max: number) {
   return typeof value === 'number' && Number.isFinite(value) ? clamp(value, min, max) : fallback;
 }
-function decodeSlot(value: unknown): Slot {
+function decodeSlot(value: unknown, content: RuntimeContent): Slot {
   if (value === null) return null;
   const stack = object(value);
-  if (typeof stack.item !== 'string' || !Object.hasOwn(ITEMS, stack.item) ||
+  if (typeof stack.item !== 'string' || !Object.hasOwn(content.materials.items, stack.item) ||
     typeof stack.amount !== 'number' || !Number.isSafeInteger(stack.amount) || stack.amount <= 0)
     throw new Error('Pilha inválida.');
-  const max = ITEMS[stack.item].armor?.durability ?? ITEMS[stack.item].tool?.durability;
+  const max = content.materials.items[stack.item].armor?.durability ?? content.materials.items[stack.item].tool?.durability;
   return max === undefined
     ? { item: stack.item, amount: stack.amount }
     : { item: stack.item, amount: stack.amount, durability: Math.floor(numeric(stack.durability, max, 1, max)) };
@@ -77,12 +77,12 @@ function decodeStations(value: unknown, infinite: boolean, content: RuntimeConte
     if (typeof x !== 'number' || !Number.isSafeInteger(x) || (!infinite && (x < 0 || x >= WORLD_W)) ||
         typeof y !== 'number' || !Number.isInteger(y) || y < 0 || y >= WORLD_H) continue;
     const position = `${x},${y}`; if (occupied.has(position)) continue;
-    const decodeSlots = (source: unknown, count: number) => Array.isArray(source) && source.length === count ? source.map(decodeSlot) : undefined;
+    const decodeSlots = (source: unknown, count: number) => Array.isArray(source) && source.length === count ? source.map(slot => decodeSlot(slot, content)) : undefined;
     const input = decodeSlots(station.input, definition.storage!.inputSlots), output = decodeSlots(station.output, definition.storage!.outputSlots),
       fuel = decodeSlots(station.fuel, definition.storage!.fuelSlots); if (!input || !output || !fuel) continue;
     const energy = station.energyState && typeof station.energyState === 'object' && !Array.isArray(station.energyState) ? object(station.energyState) : {};
     const burningRaw = energy.burningFuel && typeof energy.burningFuel === 'object' && !Array.isArray(energy.burningFuel) ? object(energy.burningFuel) : undefined;
-    const burningFuel = burningRaw && typeof burningRaw.item === 'string' && ITEMS[burningRaw.item] &&
+    const burningFuel = burningRaw && typeof burningRaw.item === 'string' && content.materials.items[burningRaw.item] &&
       Number.isFinite(burningRaw.remainingSeconds) && Number.isFinite(burningRaw.totalSeconds) && Number.isFinite(burningRaw.targetTemperature)
       ? { item: burningRaw.item, remainingSeconds: Math.max(0, burningRaw.remainingSeconds as number), totalSeconds: Math.max(0, burningRaw.totalSeconds as number), targetTemperature: Math.max(20, burningRaw.targetTemperature as number) } : null;
     let process: StationSave['process'] = null;
@@ -90,7 +90,7 @@ function decodeStations(value: unknown, infinite: boolean, content: RuntimeConte
       const job = object(station.process), recipe = typeof job.recipeId === 'string' ? content.processes.get(job.recipeId) : undefined;
       if (recipe && content.processes.compatible(definition).includes(recipe) && Array.isArray(job.reservedInputs)) process = {
         recipeId: recipe.id, elapsedWork: numeric(job.elapsedWork, 0, 0, recipe.work), requiredWork: recipe.work,
-        reservedInputs: job.reservedInputs.map(decodeSlot).filter((s): s is NonNullable<Slot> => !!s),
+        reservedInputs: job.reservedInputs.map(slot => decodeSlot(slot, content)).filter((s): s is NonNullable<Slot> => !!s),
         status: job.status === 'processing' || job.status === 'blocked' ? job.status : 'paused',
       };
     }
@@ -126,26 +126,26 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
       (data.slots.length !== 32 && (data.slots.length < BELT_SIZE * 4 || data.slots.length % BELT_SIZE))
     )
       throw new Error('Inventário inválido.');
-    slots = data.slots.map(decodeSlot);
+    slots = data.slots.map(slot => decodeSlot(slot, content));
     if (slots.length === 32) slots = [...slots.slice(0, 8), null, ...slots.slice(8)];
     while (slots.length < BELT_SIZE * 4) slots.push(null);
   } else {
     const stock = object((legacy ? player.inv : data.stock) ?? {}),
       legacyStock: Record<string, number> = {};
     for (const [id, value] of Object.entries(stock)) {
-      if (Object.hasOwn(ITEMS, id))
+      if (Object.hasOwn(content.materials.items, id))
         legacyStock[id] = Math.floor(
-          numeric(value, ITEMS[id].initial ?? 0, 0, Number.MAX_SAFE_INTEGER),
+          numeric(value, content.materials.items[id].initial ?? 0, 0, Number.MAX_SAFE_INTEGER),
         );
     }
     const upgrades = Array.isArray(data.upgrades)
       ? data.upgrades.filter(
           (id): id is string =>
-            typeof id === 'string' && Object.hasOwn(ITEMS, id) &&
-            (!!ITEMS[id].unique || !!ITEMS[id].tool || !!ITEMS[id].armor),
+            typeof id === 'string' && Object.hasOwn(content.materials.items, id) &&
+            (!!content.materials.items[id].unique || !!content.materials.items[id].tool || !!content.materials.items[id].armor),
         )
       : [];
-    slots = startingSlots(legacyStock, upgrades);
+    slots = startingSlots(legacyStock, upgrades, content.materials);
   }
   const edits: TileEdit[] = [];
   for (const pair of data.edits) {
@@ -153,7 +153,7 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
       infinite && Array.isArray(pair) && pair.length === 3 &&
       Number.isSafeInteger(pair[0]) && Number.isInteger(pair[1]) &&
       pair[1] >= 0 && pair[1] < WORLD_H && Number.isInteger(pair[2]) &&
-      Object.hasOwn(BLOCKS, pair[2])
+      Object.hasOwn(content.materials.blocks, pair[2])
     ) {
       edits.push([pair[0], pair[1], pair[2]]);
       continue;
@@ -165,7 +165,7 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
       Number.isInteger(pair[1]) &&
       pair[0] >= 0 &&
       pair[0] < WORLD_W * WORLD_H &&
-      Object.hasOwn(BLOCKS, pair[1])
+      Object.hasOwn(content.materials.blocks, pair[1])
     )
       edits.push([pair[0], pair[1]]);
   }
@@ -200,7 +200,7 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
       const drop = object(value);
       if (
         typeof drop.item === 'string' &&
-        Object.hasOwn(ITEMS, drop.item) &&
+        Object.hasOwn(content.materials.items, drop.item) &&
         typeof drop.amount === 'number' &&
         Number.isSafeInteger(drop.amount) &&
         drop.amount > 0 &&
@@ -210,7 +210,7 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
         Number.isFinite(drop.y)
       )
         drops.push({
-          ...decodeSlot(drop)!,
+          ...decodeSlot(drop, content)!,
           x: infinite ? drop.x : clamp(drop.x, 0, (WORLD_W - 1) * TILE),
           y: clamp(drop.y, 0, (WORLD_H - 2) * TILE),
           vx: numeric(drop.vx, 0, -530, 530),
@@ -228,7 +228,7 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
     const rle: number[] = [];
     for (let i = 0; i < entry[2].length; i += 2) {
       const value = entry[2][i], count = entry[2][i + 1];
-      if (!Number.isInteger(value) || (value !== 65535 && !Object.hasOwn(BLOCKS, value)) ||
+      if (!Number.isInteger(value) || (value !== 65535 && !Object.hasOwn(content.materials.blocks, value)) ||
         !Number.isInteger(count) || count <= 0) { valid = false; break; }
       total += count;
       rle.push(value, count);
@@ -236,8 +236,8 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
     if (valid && total === 64 * 32) exploration.push([entry[0], entry[1], rle]);
   }
   const equipment = Array.isArray(data.equipment) && data.equipment.length === ARMOR_SLOTS.length
-    ? data.equipment.map(decodeSlot).map((slot, index) =>
-      slot && ITEMS[slot.item].armor?.slot === ARMOR_SLOTS[index] ? slot : null)
+    ? data.equipment.map(slot => decodeSlot(slot, content)).map((slot, index) =>
+      slot && content.materials.items[slot.item].armor?.slot === ARMOR_SLOTS[index] ? slot : null)
     : ARMOR_SLOTS.map(() => null);
   const weather = data.weather && typeof data.weather === 'object' && !Array.isArray(data.weather)
     ? object(data.weather) : undefined;

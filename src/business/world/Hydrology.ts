@@ -1,4 +1,5 @@
-import { B, BLOCKS, CHUNK_WIDTH } from '../catalog';
+import { installedMaterials } from '../content/Materials';
+import { CHUNK_WIDTH } from '../catalog';
 import { mixHash } from '../../shared/math';
 import { RegionalWeather } from './RegionalWeather';
 import type { World } from './World';
@@ -16,11 +17,13 @@ const MOVING_WATER_ABSORPTION = 0.2;
 const RAIN_ABSORPTION = 0.35;
 const GRAVEL_PULL_RATE = 0.9;
 const MAX_AQUIFER_LINK_DEPTH = 160;
-const liquid = (id: number) => id === B.AIR || id === B.WATER || id === B.LAVA || id === B.TORCH || !!BLOCKS[id]?.openChannel;
-const capacity = (id: number) => liquid(id) ? full : Math.round((BLOCKS[id].waterCapacity ?? 0) * full);
 export interface WaterState { volume: number; capacity: number; saturation: number }
 
 export class Hydrology {
+  constructor(private readonly materials = installedMaterials) {}
+  private readonly liquid = (id: number) => id === this.materials.keys.AIR || id === this.materials.keys.WATER || id === this.materials.keys.LAVA || id === this.materials.keys.TORCH || !!this.materials.blocks[id]?.openChannel;
+private readonly capacity = (id: number) => this.liquid(id) ? full : Math.round((this.materials.blocks[id].waterCapacity ?? 0) * full);
+
   private readonly waterFlowListeners = new Set<(x: number, y: number, volume: number) => void>();
   onWaterFlow(listener: (x: number, y: number, volume: number) => void) {
     this.waterFlowListeners.add(listener);
@@ -47,8 +50,8 @@ export class Hydrology {
 
   /** Maximum amount a solid neighbour may absorb during one hydraulic pass. */
   private porousBudget(block: number, supply: number, quantum = interval) {
-    if (liquid(block)) return supply;
-    const permeability = BLOCKS[block].permeability ?? 0;
+    if (this.liquid(block)) return supply;
+    const permeability = this.materials.blocks[block].permeability ?? 0;
     // Ordinary soil/sand still receives a saturated-strata transfer in one
     // pass. Only compact rock uses the slow pore-scale path here.
     if (permeability >= 0.03) return supply;
@@ -60,11 +63,11 @@ export class Hydrology {
   get activeFluidCount() { return this.activeFluids.size; }
 
   amount(x: number, y: number, block: number) {
-    return this.columns.get(x)?.get(y) ?? (block === B.WATER ? full : 0);
+    return this.columns.get(x)?.get(y) ?? (block === this.materials.keys.WATER ? full : 0);
   }
 
   state(x: number, y: number, block: number): WaterState {
-    const stored = this.amount(x, y, block), cap = capacity(block);
+    const stored = this.amount(x, y, block), cap = this.capacity(block);
     return { volume: stored / full, capacity: cap / full, saturation: cap > 0 ? stored / cap : 0 };
   }
 
@@ -74,13 +77,13 @@ export class Hydrology {
   }
 
   visible(x: number, y: number, block: number) {
-    return Math.min(capacity(block), this.amount(x, y, block)) / full;
+    return Math.min(this.capacity(block), this.amount(x, y, block)) / full;
   }
 
   flowing(world: World, x: number, y: number, block: number) {
-    if (!liquid(block) || !this.amount(x, y, block) || y + 1 >= world.height) return false;
+    if (!this.liquid(block) || !this.amount(x, y, block) || y + 1 >= world.height) return false;
     const below = world.get(x, y + 1);
-    return liquid(below) && this.amount(x, y + 1, below) < capacity(below);
+    return this.liquid(below) && this.amount(x, y + 1, below) < this.capacity(below);
   }
 
   direction(x: number, y: number) {
@@ -88,16 +91,16 @@ export class Hydrology {
   }
 
   fluidKind(block: number) {
-    if (block === B.LAVA) return 'lava' as const;
-    if (block === B.WATER) return 'water' as const;
+    if (block === this.materials.keys.LAVA) return 'lava' as const;
+    if (block === this.materials.keys.WATER) return 'water' as const;
     return undefined;
   }
 
   dripping(world: World, x: number, y: number, block: number) {
-    if (!liquid(block) || !this.drips.has(`${x},${y}`) || this.amount(x, y, block) > 150) return false;
+    if (!this.liquid(block) || !this.drips.has(`${x},${y}`) || this.amount(x, y, block) > 150) return false;
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, 1]]) {
       const neighbor = world.get(x + dx, y + dy);
-      if (liquid(neighbor) && this.amount(x + dx, y + dy, neighbor) > 0) return false;
+      if (this.liquid(neighbor) && this.amount(x + dx, y + dy, neighbor) > 0) return false;
     }
     return true;
   }
@@ -105,7 +108,7 @@ export class Hydrology {
   private write(x: number, y: number, block: number, amount: number) {
     const previous = this.amount(x, y, block);
     let column = this.columns.get(x);
-    if (amount === (block === B.WATER ? full : 0)) {
+    if (amount === (block === this.materials.keys.WATER ? full : 0)) {
       column?.delete(y);
       if (!column?.size) this.columns.delete(x);
       this.directions.delete(`${x},${y}`);
@@ -121,13 +124,13 @@ export class Hydrology {
 
   drink(x: number, y: number, block: number, demand: number) {
     const available = this.amount(x, y, block);
-    const taken = Math.min(available, capacity(block), demand);
+    const taken = Math.min(available, this.capacity(block), demand);
     this.write(x, y, block, available - taken);
     return taken;
   }
 
   displace(world: World, x: number, y: number, before: number, after: number) {
-    if (after === B.WATER) {
+    if (after === this.materials.keys.WATER) {
       this.write(x, y, after, full);
       this.wakeNearbyFluids(world, x, y);
       return;
@@ -141,8 +144,8 @@ export class Hydrology {
   private wakeNearbyFluids(world: World, x: number, y: number) {
     for (const [dx, dy] of [[0, 0], [0, -1], [0, 1], [-1, 0], [1, 0]]) {
       const tx = x + dx, ty = y + dy;
-      const block = world.inside(tx, ty) ? world.get(tx, ty) : B.BEDROCK;
-      if (liquid(block) && this.amount(tx, ty, block) > 0)
+      const block = world.inside(tx, ty) ? world.get(tx, ty) : this.materials.keys.BEDROCK;
+      if (this.liquid(block) && this.amount(tx, ty, block) > 0)
         this.activeFluids.add(`${tx},${ty}`);
     }
   }
@@ -166,7 +169,7 @@ export class Hydrology {
         continue;
       }
       const block = world.get(x, y);
-      if (!liquid(block) || !this.amount(x, y, block)) continue;
+      if (!this.liquid(block) || !this.amount(x, y, block)) continue;
       if (!this.flow(world, x, y, this.amount(x, y, block), dt)) {
         this.directions.delete(key);
         continue;
@@ -196,7 +199,7 @@ export class Hydrology {
     const isWater = (x: number, y: number) => {
       if (!region.containsTile(x, y)) return false;
       const block = world.peek(x, y);
-      return block !== undefined && block !== B.LAVA && liquid(block) &&
+      return block !== undefined && block !== this.materials.keys.LAVA && this.liquid(block) &&
         this.amount(x, y, block) > 0;
     };
     for (const seed of seeds) {
@@ -244,7 +247,7 @@ export class Hydrology {
   }
 
   private releaseExcess(world: World, x: number, y: number, block: number, volume: number) {
-    const retained = Math.min(volume, capacity(block));
+    const retained = Math.min(volume, this.capacity(block));
     let excess = volume - retained;
     if (!excess) return;
     this.write(x, y, block, retained);
@@ -257,7 +260,7 @@ export class Hydrology {
   transferBucket(x: number, y: number, block: number, pour: boolean) {
     const dose = 200;
     const current = this.amount(x, y, block);
-    if (block === B.LAVA || (pour ? capacity(block) - current < dose : !liquid(block) || current < dose)) return false;
+    if (block === this.materials.keys.LAVA || (pour ? this.capacity(block) - current < dose : !this.liquid(block) || current < dose)) return false;
     this.write(x, y, block, current + (pour ? dose : -dose));
     return true;
   }
@@ -265,7 +268,7 @@ export class Hydrology {
   private fill(world: World, x: number, y: number, supply: number) {
     if (!world.inside(x, y) || !this.activeColumnContains(x)) return 0;
     const block = world.get(x, y), current = this.amount(x, y, block);
-    const accepted = Math.min(supply, Math.max(0, capacity(block) - current));
+    const accepted = Math.min(supply, Math.max(0, this.capacity(block) - current));
     if (accepted) this.write(x, y, block, current + accepted);
     return accepted;
   }
@@ -281,9 +284,9 @@ export class Hydrology {
     if (visited.has(key)) return supply;
     visited.add(key);
     const block = world.get(x, y);
-    if (block === B.LAVA) return supply;
-    if (liquid(block)) return supply - this.fill(world, x, y, supply);
-    const cap = capacity(block);
+    if (block === this.materials.keys.LAVA) return supply;
+    if (this.liquid(block)) return supply - this.fill(world, x, y, supply);
+    const cap = this.capacity(block);
     if (!cap) return supply;
     const current = this.amount(x, y, block);
     const absorbed = this.fill(world, x, y, Math.min(supply, Math.max(0, cap - current)));
@@ -306,13 +309,13 @@ export class Hydrology {
       const tx = x + dx, ty = y + dy;
       if (!this.activeColumnContains(tx)) continue;
       const target = world.get(tx, ty);
-      if (target === B.LAVA) continue;
+      if (target === this.materials.keys.LAVA) continue;
       // Saturated strata may conduct excess water, but the receiving solid
       // still obeys its own permeability. In particular, stone must not
       // receive a full transfer merely because it touches another stone.
       const accepted = this.fill(world, tx, ty, this.porousBudget(target, excess));
       excess -= accepted;
-      if (dy === 1 && accepted && liquid(target)) this.drips.add(`${tx},${ty}`);
+      if (dy === 1 && accepted && this.liquid(target)) this.drips.add(`${tx},${ty}`);
     }
     if (!excess) return 0;
 
@@ -321,18 +324,18 @@ export class Hydrology {
       const tx = x + dx, ty = y + dy;
       if (!this.activeColumnContains(tx)) continue;
       const target = world.get(tx, ty);
-      if (liquid(target) || !capacity(target) ||
-        this.amount(tx, ty, target) < capacity(target)) continue;
+      if (this.liquid(target) || !this.capacity(target) ||
+        this.amount(tx, ty, target) < this.capacity(target)) continue;
       excess = this.percolate(world, tx, ty, excess, visited);
     }
     if (excess && allowUp) {
       if (!this.activeColumnContains(x)) return excess;
       const target = world.get(x, y - 1);
-      if (target !== B.LAVA) {
+      if (target !== this.materials.keys.LAVA) {
         const accepted = this.fill(world, x, y - 1, excess);
         excess -= accepted;
-        if (excess && !liquid(target) && capacity(target) &&
-          this.amount(x, y - 1, target) >= capacity(target))
+        if (excess && !this.liquid(target) && this.capacity(target) &&
+          this.amount(x, y - 1, target) >= this.capacity(target))
           excess = this.percolate(world, x, y - 1, excess, visited);
       }
     }
@@ -363,11 +366,11 @@ export class Hydrology {
     if (target === undefined) {
       target = null;
       for (let y = surface + 1; y <= Math.min(world.height - 1, surface + MAX_AQUIFER_LINK_DEPTH); y++) {
-        if (world.peek(x, y) === B.WATER) { target = y; break; }
+        if (world.peek(x, y) === this.materials.keys.WATER) { target = y; break; }
       }
       this.aquiferLinks.set(x, target);
     }
-    if (target === null || world.peek(x, target) !== B.WATER) return 0;
+    if (target === null || world.peek(x, target) !== this.materials.keys.WATER) return 0;
     const accepted = this.fill(world, x, target, supply);
     this.recharged += accepted;
     return accepted;
@@ -377,11 +380,11 @@ export class Hydrology {
     region?: SimulationRegion) {
     if (!dose) return;
     let roof = this.sky.get(x);
-    if (roof === undefined || (world.peek(x, roof) === B.WATER && !world.waterAt(x, roof))) {
+    if (roof === undefined || (world.peek(x, roof) === this.materials.keys.WATER && !world.waterAt(x, roof))) {
       roof = 0;
       while (roof < world.height - 1) {
         const block = world.get(x, roof);
-        if (!liquid(block) || (block === B.WATER && this.amount(x, roof, block))) break;
+        if (!this.liquid(block) || (block === this.materials.keys.WATER && this.amount(x, roof, block))) break;
         roof++;
       }
       this.sky.set(x, roof);
@@ -394,25 +397,25 @@ export class Hydrology {
     const block = world.get(x, exposed);
     if ((partition !== undefined && blockPartitionAt(x, exposed) !== partition) ||
       (region && !region.containsColumn(x))) return;
-    if (block === B.LAVA) return;
+    if (block === this.materials.keys.LAVA) return;
     if (dose < 0) {
-      this.drink(x, exposed, block, liquid(block) ? -dose : Math.round(-dose * 0.375));
+      this.drink(x, exposed, block, this.liquid(block) ? -dose : Math.round(-dose * 0.375));
       return;
     }
     // Infiltrate precipitation at the impact surface before forming a puddle.
-    if (!liquid(block)) {
-      const offered = Math.min(dose, Math.ceil((BLOCKS[block].permeability ?? 0) *
+    if (!this.liquid(block)) {
+      const offered = Math.min(dose, Math.ceil((this.materials.blocks[block].permeability ?? 0) *
         full * interval * RAIN_ABSORPTION));
       let unused = this.percolate(world, x, exposed, offered);
       // Saturated connected strata act as a coarse fracture network. This link
       // only targets already-generated aquifers and never generates distant terrain.
-      if (unused && this.amount(x, exposed, block) >= capacity(block))
+      if (unused && this.amount(x, exposed, block) >= this.capacity(block))
         unused -= this.rechargeAquifer(world, x, exposed, unused);
       dose -= offered - unused;
     }
     // What the ground cannot receive becomes surface storage.
-    let y = liquid(block) ? exposed : exposed - 1;
-    while (dose > 0 && y >= 0 && liquid(world.get(x, y))) {
+    let y = this.liquid(block) ? exposed : exposed - 1;
+    while (dose > 0 && y >= 0 && this.liquid(world.get(x, y))) {
       dose -= this.fill(world, x, y, dose);
       y--;
     }
@@ -451,7 +454,7 @@ export class Hydrology {
     const bottom = region ? world.height - 1 : Math.min(world.height - 1, cy + 38);
     for (let x = left; x <= right; x++) {
       for (let y = top; y <= bottom; y++) {
-        if (world.peek(x, y) === B.WATER && !this.columns.get(x)?.has(y) &&
+        if (world.peek(x, y) === this.materials.keys.WATER && !this.columns.get(x)?.has(y) &&
           (partition === undefined || blockPartitionAt(x, y) === partition))
           pending.push([x, y, full]);
       }
@@ -473,7 +476,7 @@ export class Hydrology {
   }
 
   private flow(world: World, x: number, y: number, start: number, quantum = interval) {
-    const block = world.get(x, y), cap = capacity(block);
+    const block = world.get(x, y), cap = this.capacity(block);
     const stored = this.amount(x, y, block);
     if (stored > cap) {
       this.releaseExcess(world, x, y, block, stored);
@@ -481,12 +484,12 @@ export class Hydrology {
     }
     let budget = Math.min(start, stored);
     if (!budget) return false;
-    const free = liquid(block), below = world.get(x, y + 1);
+    const free = this.liquid(block), below = world.get(x, y + 1);
     let transferred = false;
-    if (block !== B.GRAVEL && block !== B.LAVA) {
+    if (block !== this.materials.keys.GRAVEL && block !== this.materials.keys.LAVA) {
       let requested = Math.ceil(budget * Math.min(1, GRAVEL_PULL_RATE * quantum / interval));
       for (const [dx, dy] of [[0, 1], [-1, 0], [1, 0], [0, -1]] as const) {
-        if (!requested || !budget || world.peek(x + dx, y + dy) !== B.GRAVEL) continue;
+        if (!requested || !budget || world.peek(x + dx, y + dy) !== this.materials.keys.GRAVEL) continue;
         const sent = this.fill(world, x + dx, y + dy, Math.min(requested, budget));
         if (!sent) continue;
         budget -= sent;
@@ -496,66 +499,66 @@ export class Hydrology {
       }
       if (!budget) return transferred;
     }
-    if (!free && block === B.DIRT && stored >= cap &&
-      y >= world.heightAt(x) + 2 && (BLOCKS[below].permeability ?? 0) < 0.03 && !liquid(below)) {
+    if (!free && block === this.materials.keys.DIRT && stored >= cap &&
+      y >= world.heightAt(x) + 2 && (this.materials.blocks[below].permeability ?? 0) < 0.03 && !this.liquid(below)) {
       // Hydraulic piping concentrates along perched water tables. A connected
       // cavity is more likely to expand than an isolated pore is to collapse.
       const poolNearby = [-1, 1].some(dx => {
         const id = world.peek(x + dx, y);
-        return id !== undefined && liquid(id) && world.waterAt(x + dx, y, id) > 0.25;
+        return id !== undefined && this.liquid(id) && world.waterAt(x + dx, y, id) > 0.25;
       });
       const roll = mixHash(x, y, world.h ^ Math.imul(this.weather.ticks, 2654435761));
       if (
         this.weather.ticks >= 300 &&
         roll / 4294967296 < (poolNearby ? 0.1 : 0.01) &&
-        world.changeHabitat(x, y, block, B.AIR)
+        world.changeHabitat(x, y, block, this.materials.keys.AIR)
       ) return true;
     }
     const transfer = (dx: number, dy: number, requested: number) => {
       if (requested <= 0 || !budget) return 0;
       const neighbor = world.get(x + dx, y + dy);
-      if (block === B.WATER && neighbor === B.LAVA) {
-        world.set(x + dx, y + dy, B.STONE);
-        this.write(x + dx, y + dy, B.STONE, 0);
+      if (block === this.materials.keys.WATER && neighbor === this.materials.keys.LAVA) {
+        world.set(x + dx, y + dy, this.materials.keys.STONE);
+        this.write(x + dx, y + dy, this.materials.keys.STONE, 0);
         transferred = true;
         return 0;
       }
-      if (block === B.LAVA && neighbor === B.WATER) {
-        world.set(x, y, B.STONE);
-        this.write(x, y, B.STONE, 0);
+      if (block === this.materials.keys.LAVA && neighbor === this.materials.keys.WATER) {
+        world.set(x, y, this.materials.keys.STONE);
+        this.write(x, y, this.materials.keys.STONE, 0);
         budget = 0;
         transferred = true;
         return 0;
       }
       const offered = Math.min(budget, requested);
-      const sent = block !== B.LAVA && !liquid(neighbor)
+      const sent = block !== this.materials.keys.LAVA && !this.liquid(neighbor)
         ? offered - this.percolate(world, x + dx, y + dy, offered)
         : this.fill(world, x + dx, y + dy, offered);
       if (sent) {
-        if (free && liquid(neighbor) && block !== B.LAVA && neighbor !== B.LAVA)
+        if (free && this.liquid(neighbor) && block !== this.materials.keys.LAVA && neighbor !== this.materials.keys.LAVA)
           for (const listener of this.waterFlowListeners) listener(x, y, sent / full);
         this.write(x, y, block, this.amount(x, y, block) - sent);
         budget -= sent;
         transferred = true;
         this.activeFluids.add(`${x},${y}`);
-        if (liquid(neighbor)) this.activeFluids.add(`${x + dx},${y + dy}`);
+        if (this.liquid(neighbor)) this.activeFluids.add(`${x + dx},${y + dy}`);
         this.directions.set(`${x},${y}`, { dx, dy });
         this.directions.delete(`${x + dx},${y + dy}`);
       }
       return sent;
     };
-    if (block === B.GRAVEL && (below === B.GRAVEL || liquid(below)))
+    if (block === this.materials.keys.GRAVEL && (below === this.materials.keys.GRAVEL || this.liquid(below)))
       transfer(0, 1, Math.ceil(budget * Math.min(1, GRAVEL_PULL_RATE * quantum / interval)));
     if (!free && stored < cap) return transferred;
     const mobile = free ? budget : Math.max(0, stored - cap);
     if (!free) budget = mobile;
-    const fluid = BLOCKS[block].fluid;
+    const fluid = this.materials.blocks[block].fluid;
     const spread = fluid?.spread ?? 1;
     const conductivity = Math.min(
-      free ? 2 * spread : (BLOCKS[block].permeability ?? 0),
-      liquid(below) ? 2 : BLOCKS[below].permeability ?? 0);
+      free ? 2 * spread : (this.materials.blocks[block].permeability ?? 0),
+      this.liquid(below) ? 2 : this.materials.blocks[below].permeability ?? 0);
     const moving = free && this.flowing(world, x, y, block);
-    const absorption = moving && !liquid(below) ? MOVING_WATER_ABSORPTION : 1;
+    const absorption = moving && !this.liquid(below) ? MOVING_WATER_ABSORPTION : 1;
     // Preserve fractional requests for very impermeable materials. Rounding
     // every request up to one unit made compact stone absorb a full unit on
     // every simulation step, defeating its low permeability.
@@ -563,14 +566,14 @@ export class Hydrology {
     const downward = free
       ? transfer(0, 1, Math.min(mobile, porousRequest(full * quantum * conductivity * absorption)))
       : 0;
-    if (!free && downward > 0 && liquid(below)) this.drips.add(`${x},${y + 1}`);
+    if (!free && downward > 0 && this.liquid(below)) this.drips.add(`${x},${y + 1}`);
     const lateral = this.sweepRight ? [1, -1] : [-1, 1];
     if (free) {
       for (const dx of lateral) {
         const neighbor = world.peek(x + dx, y);
         if (neighbor === undefined) continue;
-        if (!liquid(neighbor)) {
-          transfer(dx, 0, porousRequest((BLOCKS[neighbor].permeability ?? 0) * full *
+        if (!this.liquid(neighbor)) {
+          transfer(dx, 0, porousRequest((this.materials.blocks[neighbor].permeability ?? 0) * full *
             quantum * 0.25 * (moving ? MOVING_WATER_ABSORPTION : 1)));
           continue;
         }
