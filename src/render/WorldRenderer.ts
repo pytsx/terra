@@ -135,6 +135,17 @@ export class WorldRenderer {
         const sx = Math.floor(x * TILE - this.cam.x),
           sy = Math.floor(y * TILE - this.cam.y);
         if (id && id !== B.WATER) this.atlas.tile(c, id, sx, sy, mixHash(x, y, this.scene.world.h) % 4);
+        const machine = this.scene.stationVisualAt(x, y);
+        if (machine?.burning) {
+          const flicker = Math.floor(this.scene.elapsed * 12) % 3;
+          c.fillStyle = '#e78b3c'; c.fillRect(sx + 8, sy + 11 - flicker, 8, 5 + flicker);
+          c.fillStyle = '#f5cc72'; c.fillRect(sx + 11, sy + 13, 3, 4);
+        }
+        if (machine?.manual && machine.working) {
+          const angle = this.scene.elapsed * 8;
+          c.fillStyle = '#d8b06b';
+          c.fillRect(sx + 11 + Math.round(Math.cos(angle) * 5), sy + 12 + Math.round(Math.sin(angle) * 4), 4, 3);
+        }
         if (water) {
           const capacity = BLOCKS[id].waterCapacity;
           if (capacity) {

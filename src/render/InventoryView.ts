@@ -14,14 +14,15 @@ export interface BagModel {
   grid: readonly Slot[];
   recipePreview?: readonly Slot[];
   size: number;
-  station?: 'workbench' | 'mill' | 'oven';
+  station?: string;
+  processing?: import('../business/Expedition').Expedition['stationModel'];
   result: Slot;
   seed: string;
   slot: number;
   craftable: readonly {
     index: number;
     output: Stack;
-    station?: 'workbench' | 'mill' | 'oven';
+    station?: string;
     requirements: readonly { item: string; amount: number }[];
     available: boolean;
   }[];
@@ -87,12 +88,11 @@ export class InventoryView {
   }
   draw(m: BagModel) {
     const dialog = element('inventory');
-    dialog.classList.toggle('station-mode', !!m.station);
-    dialog.classList.toggle('station-mill', m.station === 'mill');
-    dialog.classList.toggle('station-oven', m.station === 'oven');
+    dialog.classList.toggle('station-mode', !!m.station || !!m.processing);
+    dialog.classList.toggle('processing-mode', !!m.processing);
+    dialog.classList.remove('station-mill', 'station-oven');
     element('bagSeed').textContent = m.station ? '' : m.seed;
-    const stationNames = { workbench: 'Bancada de fabricação', mill: 'Moinho', oven: 'Forno' } as const;
-    element('bag-title').textContent = m.station ? stationNames[m.station] : 'Mochila de campo';
+    element('bag-title').textContent = m.processing?.name ?? (m.station ? ITEMS[m.station]?.name ?? m.station : 'Mochila de campo');
     element('craftSize').textContent = '';
     const grid = element('craftGrid');
     grid.style.setProperty('--side', String(m.size));
@@ -141,10 +141,54 @@ export class InventoryView {
     result.setAttribute('aria-label', result.title);
     if (m.result) this.decorate(result, m.result);
     element('resultName').textContent = m.result ? ITEMS[m.result.item].name : 'Resultado';
-    const station = m.station === 'workbench' ? 'workbench' : m.station;
+    this.drawProcessing(m.processing);
+    const station = m.processing?.definitionId ?? m.station;
     element('packEmblem').replaceChildren(
       station ? this.icons.item(station) : node('span', undefined, 'bag-icon'),
     );
+  }
+  private drawProcessing(model: BagModel['processing']) {
+    const host = element('craftGrid').closest('.craft-station')!;
+    let panel = host.querySelector<HTMLElement>('.processing-panel');
+    if (!model) { panel?.remove(); return; }
+    if (!panel || panel.dataset.stationId !== model.id) {
+      panel?.remove(); panel = node('section', undefined, 'processing-panel');
+      panel.dataset.stationId = model.id;
+      for (const area of ['input', 'fuel', 'output'] as const) {
+        const group = node('div', undefined, 'processing-row');
+        group.append(node('span', {input:'Entrada',fuel:'Combustível',output:'Saída'}[area]));
+        const slots = node('div', undefined, 'processing-slots');
+        slots.dataset.area = area;
+        group.append(slots); panel.append(group);
+      }
+      const status = node('p', undefined, 'processing-status');
+      const progress = node('progress'); progress.max = 1;
+      const thermal = node('p', undefined, 'processing-thermal');
+      const controls = node('div', undefined, 'processing-controls');
+      for (const [action, label] of [['enable','Ativar / Pausar'],['cancel','Cancelar lote'],['start','Segure para moer']]) {
+        const button = node('button', label);
+        button.dataset.stationAction = action;
+        if (action !== 'start' || model.manual) controls.append(button);
+      }
+      panel.append(status, progress, thermal, controls);
+      host.append(panel);
+    }
+    for (const area of ['input','fuel','output'] as const) {
+      const group = panel.querySelector<HTMLElement>('[data-area="' + area + '"]')!;
+      (group.parentElement as HTMLElement).hidden = model[area].length === 0;
+      group.replaceChildren(...model[area].map((slot, index) => {
+        const button = node('button', undefined, 'cell');
+        button.dataset.stationSlot = area + '-' + index;
+        button.title = slot ? ITEMS[slot.item].name + ' × ' + slot.amount : 'Vazio';
+        button.setAttribute('aria-label', button.title);
+        if (slot) this.decorate(button, slot);
+        return button;
+      }));
+    }
+    panel.querySelector('.processing-status')!.textContent = model.status + (model.enabled ? '' : ' · Desativada');
+    panel.querySelector('progress')!.value = model.progress;
+    panel.querySelector('.processing-thermal')!.textContent = model.manual ? 'Trabalho manual' :
+      Math.floor(model.temperature) + ' °C · ' + (model.burningFuel ? Math.ceil(model.burningFuel.remainingSeconds) + ' s de combustível' : 'Sem chama');
   }
   private drawPlayer(canvas: HTMLCanvasElement, model: BagModel) {
     const c = canvas.getContext('2d')!;

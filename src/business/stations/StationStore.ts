@@ -18,10 +18,18 @@ export class StationStore {
   getAt(x: number, y: number) { return this.byPosition.get(key(x, y)); }
   private region(x: number) { return Math.floor(x / CHUNK_WIDTH); }
   create(definitionId: string, x: number, y: number) {
-    const existing = this.getAt(x, y); if (existing) return existing;
+    const existing = this.getAt(x, y);
+    if (existing) {
+      if (existing.definitionId !== definitionId) throw new Error('Estação incompatível na posição');
+      return existing;
+    }
     const definition = stationRegistry.get(definitionId);
     if (!definition || definition.mode !== 'processing' || !definition.storage) throw new Error(`Estação inválida: ${definitionId}`);
-    const id = `station-${this.nextId++}`;
+    let id: string;
+    do {
+      if (!Number.isSafeInteger(this.nextId) || this.nextId >= Number.MAX_SAFE_INTEGER) throw new Error('Identificadores de estações esgotados');
+      id = `station-${this.nextId++}`;
+    } while (this.byId.has(id));
     const instance: StationInstance = {
       id, definitionId, x, y, revision: 0,
       input: Array.from({ length: definition.storage.inputSlots }, () => null),
@@ -47,6 +55,7 @@ export class StationStore {
       for (const id of this.regions.get(chunk) ?? []) { const station = this.byId.get(id)!; if (region.containsTile(station.x, station.y)) result.push(station); }
     return result;
   }
+  values() { return [...this.byId.values()]; }
   save(): StationStoreSave {
     return { nextId: this.nextId, records: [...this.byId.values()].map(({ manualWork: _manual, ...station }) => ({
       ...station, input: cloneSlots(station.input), output: cloneSlots(station.output), fuel: cloneSlots(station.fuel),
@@ -54,10 +63,12 @@ export class StationStore {
     })) };
   }
   restore(saved: StationStoreSave) {
-    this.byId.clear(); this.byPosition.clear(); this.regions.clear(); this.nextId = Math.max(1, saved.nextId);
+    this.byId.clear(); this.byPosition.clear(); this.regions.clear(); this.nextId = Number.isSafeInteger(saved.nextId) && saved.nextId > 0 ? saved.nextId : 1;
     for (const record of saved.records) {
       const definition = stationRegistry.get(record.definitionId);
-      if (!definition || definition.mode !== 'processing' || this.byId.has(record.id) || this.getAt(record.x, record.y)) continue;
+      if (!definition || definition.mode !== 'processing' || this.byId.has(record.id) || this.getAt(record.x, record.y)) throw new Error('Instância de estação inválida');
+      const suffix = /^station-(\d+)$/.exec(record.id);
+      if (suffix) this.nextId = Math.max(this.nextId, Number(suffix[1]) + 1);
       const station: StationInstance = { ...record, input: cloneSlots(record.input), output: cloneSlots(record.output), fuel: cloneSlots(record.fuel),
         process: cloneJob(record.process), energyState: { ...record.energyState, burningFuel: record.energyState.burningFuel ? { ...record.energyState.burningFuel } : null }, manualWork: false };
       this.byId.set(station.id, station); this.byPosition.set(key(station.x, station.y), station);

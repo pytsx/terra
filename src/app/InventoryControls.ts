@@ -11,6 +11,7 @@ export class InventoryControls {
   private readonly dialog = element<HTMLDialogElement>('inventory');
   private pointerId: number | null = null;
   private ignorePointerClick = false;
+  private manualStation: string | null = null;
   private readonly targets = new Map<string, SlotRef>();
 
 
@@ -19,6 +20,22 @@ export class InventoryControls {
     private readonly refresh: () => void,
     private readonly view: Views['bag'],
   ) {
+    const stop = () => {
+      if (this.manualStation) this.game().stationAction(this.manualStation, 'stop');
+      this.manualStation = null;
+    };
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    window.addEventListener('blur', stop);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
+    this.dialog.addEventListener('pointerdown', event => {
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-station-action="start"]') : null;
+      const model = this.game().stationModel;
+      if (target && model && event.button === 0 && this.game().stationAction(model.id, 'start')) {
+        this.manualStation = model.id;
+        event.preventDefault();
+      }
+    });
     window.addEventListener('pointermove', (event) => {
       if (!this.dialog.open) return;
       this.view.positionCursor(event.clientX, event.clientY);
@@ -51,6 +68,21 @@ export class InventoryControls {
       if (this.ignorePointerClick && event.detail > 0) {
         this.ignorePointerClick = false;
         return;
+      }
+      const model = this.game().stationModel;
+      if (model && event.target instanceof Element) {
+        const slot = event.target.closest<HTMLElement>('[data-station-slot]');
+        const action = event.target.closest<HTMLElement>('[data-station-action]');
+        if (slot) {
+          const [area, index] = slot.dataset.stationSlot!.split('-');
+          this.game().stationAction(model.id, 'slot', area as 'input' | 'fuel' | 'output', Number(index), event.shiftKey ? 1 : undefined);
+          this.refresh(); return;
+        }
+        if (action) {
+          if (action.dataset.stationAction !== 'start') this.game().stationAction(model.id, action.dataset.stationAction!);
+          this.refresh(); return;
+        }
+        if (event.target.closest('#craftGrid, #craftResult, [data-recipe]')) return;
       }
       const recipe = event.target instanceof Element
         ? event.target.closest<HTMLElement>('[data-recipe]') : null;
@@ -92,6 +124,8 @@ export class InventoryControls {
   }
 
   reset() {
+    if (this.manualStation) this.game().stationAction(this.manualStation, 'stop');
+    this.manualStation = null;
     this.cancelDrag();
   }
 

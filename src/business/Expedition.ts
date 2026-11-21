@@ -25,7 +25,8 @@ import { EntityUpdateGroup } from './simulation/EntityUpdateGroup';
 import { GAME_DAY_SECONDS } from './time';
 import { StationStore } from './stations/StationStore';
 import { ProcessingSystem } from './stations/ProcessingSystem';
-import { stationRegistry } from './stations/StationRegistry';
+import { stationRegistry, processingRecipes } from './stations/StationRegistry';
+import type { StationInstance } from './stations/StationTypes';
 import {
   CommandBus,
   SetPlacementModeCommand,
@@ -84,6 +85,7 @@ export class Expedition {
     distributeStack: defineCommand('distributeStack', this.performDistributeStack.bind(this)),
     takeResult: defineCommand('takeResult', this.performTakeResult.bind(this)),
     fillRecipe: defineCommand('fillRecipe', this.performFillRecipe.bind(this)),
+    stationAction: defineCommand('stationAction', this.performStationAction.bind(this)),
     openWorkbench: defineCommand('openWorkbench', this.performOpenWorkbench.bind(this)),
     closeCraft: defineCommand('closeCraft', this.performCloseCraft.bind(this)),
     dropSelected: defineCommand('dropSelected', this.performDropSelected.bind(this)),
@@ -108,6 +110,7 @@ export class Expedition {
   private readonly entityUpdates = new EntityUpdateGroup<EngineEntity>();
   private readonly entityRegions: RegionalEntityStore;
   private readonly stations: StationStore;
+  private openedStationId: string | null = null;
   private readonly processing = new ProcessingSystem();
   private activeEntityCount = 0;
   private swing: { item: string; angle: number; started: number; duration: number } | null = null;
@@ -140,11 +143,28 @@ export class Expedition {
     this.placementMode = save?.placementMode ?? 'approach';
     this.drops = new DroppedItems(save?.drops);
     this.stations = new StationStore(save?.stations);
+    // Legacy worlds store installed machines as tile edits, not station records.
+    // Only examine recorded edits, never generate the entire world.
+    const installed = new Map<string, string>();
+    for (const edit of this.terrain.exportEdits()) {
+      const [x, y, block] = edit.length === 3 ? edit :
+        [edit[0] % this.terrain.width, Math.floor(edit[0] / this.terrain.width), edit[1]];
+      const definition = stationRegistry.forBlock(block);
+      if (definition?.mode === 'processing') {
+        installed.set(`${x},${y}`, definition.id);
+        if (!this.stations.getAt(x, y)) this.stations.create(definition.id, x, y);
+      }
+    }
+    for (const station of this.stations.values()) {
+      if (installed.get(`${station.x},${station.y}`) !== station.definitionId)
+        throw new Error('Save contém estação sem bloco correspondente: ' + station.id);
+    }
     this.terrain.onBlockEdited(({ x, y, previous, block }) => {
       const before = previous === undefined ? undefined : stationRegistry.forBlock(previous);
       const after = stationRegistry.forBlock(block);
       if (before?.mode === 'processing' && before.id !== after?.id) {
         const instance = this.stations.getAt(x, y);
+        if (instance?.id === this.openedStationId) this.openedStationId = null;
         if (instance) for (const stack of this.stations.remove(instance.id))
           this.drops.spawn({ ...stack, x: (x + 0.5) * TILE, y: y * TILE - 6 }, 0, -45);
       }
@@ -210,20 +230,72 @@ export class Expedition {
   get inventory() {
     return this.bag.snapshot();
   }
-  stationAt(x: number, y: number) { return this.stations.getAt(x, y); }
-  stationInsert(x: number, y: number, area: 'input' | 'fuel', item: string, amount = 1) {
-    const station = this.stations.getAt(x, y); if (!station || this.bag.count(item) < amount) return false;
-    const left = this.processing.insert(station, area, { item, amount });
-    const moved = amount - left; if (!moved) return false;
-    for (let i = 0; i < moved; i++) this.bag.use(item); return left === 0;
+  private stationReachable(station: StationInstance) {
+    const hit = this.aimedContact({ x: (station.x + .5) * TILE, y: (station.y + .5) * TILE });
+    return hit?.kind === 'block' && hit.tx === station.x && hit.ty === station.y &&
+      stationRegistry.forBlock(hit.id)?.id === station.definitionId;
   }
-  stationTakeOutput(x: number, y: number, index = 0) {
-    const station = this.stations.getAt(x, y), stack = station && this.processing.takeOutput(station, index);
-    if (!stack) return false; this.bag.collect(stack.item, stack.amount, stack.durability); return true;
+  get stationOpen() { return this.openedStationId !== null; }
+  get stationModel() {
+    const station = this.openedStationId && this.stations.getById(this.openedStationId);
+    if (!station) return undefined;
+    const definition = stationRegistry.get(station.definitionId)!;
+    const copy = (slots: StationInstance['input']) => slots.map(s => s ? { ...s } : null);
+    return {
+      id: station.id, name: definition.name, definitionId: definition.id,
+      input: copy(station.input), output: copy(station.output), fuel: copy(station.fuel),
+      enabled: station.enabled, manual: definition.energy.type === 'manual',
+      status: this.processing.status(station), manualWork: station.manualWork,
+      progress: station.process ? station.process.elapsedWork / station.process.requiredWork : 0,
+      temperature: station.energyState.temperature,
+      targetTemperature: station.energyState.targetTemperature,
+      burningFuel: station.energyState.burningFuel ? { ...station.energyState.burningFuel } : null,
+      selectedRecipe: station.selectedRecipe,
+      recipes: processingRecipes.compatible(definition).map(r => ({
+        id: r.id, name: ITEMS[r.outputs[0].item].name,
+      })),
+    };
   }
-  operateStation(x: number, y: number, active: boolean) {
-    const station = this.stations.getAt(x, y); if (!station) return false;
-    this.processing.setManualWork(station, active); return true;
+  stationVisualAt(x: number, y: number) {
+    const station = this.stations.getAt(x, y);
+    return station ? { burning: !!station.energyState.burningFuel,
+      working: station.process?.status === 'processing' && station.enabled,
+      manual: stationRegistry.get(station.definitionId)?.energy.type === 'manual' } : undefined;
+  }
+  stationAction(id: string, action: string, area?: 'input' | 'output' | 'fuel', index?: number, value?: string | number) {
+    return this.commands.run(this.actions.stationAction(id, action, area, index, value));
+  }
+  private performStationAction(id: string, action: string, area?: 'input' | 'output' | 'fuel', index?: number, value?: string | number) {
+    const station = this.stations.getById(id);
+    if (!station || id !== this.openedStationId) return false;
+    if (action === 'stop') { this.processing.setManualWork(station, false); return true; }
+    if (!this.stationReachable(station)) { this.processing.setManualWork(station, false); return false; }
+    const definition = stationRegistry.get(station.definitionId)!;
+    if (action === 'enable') { station.enabled = !station.enabled; station.revision++; return true; }
+    if (action === 'start' && definition.energy.type === 'manual') {
+      this.processing.setManualWork(station, true); return true;
+    }
+    if (action === 'cancel') return this.processing.cancel(station);
+    if (action === 'temperature' && typeof value === 'number') return this.processing.setTargetTemperature(station, value);
+    if (action === 'recipe' && typeof value === 'string' && !station.process &&
+        processingRecipes.compatible(definition).some(r => r.id === value)) {
+      station.selectedRecipe = value; station.revision++; return true;
+    }
+    if (action !== 'slot' || !area || index === undefined || !Number.isInteger(index) ||
+        index < 0 || index >= station[area].length) return false;
+    const held = this.bag.held(), slot = station[area][index];
+    if (!held) {
+      if (!slot || !this.bag.receiveCursor(slot)) return false;
+      station[area][index] = null; station.revision++; return true;
+    }
+    if (area === 'output' || (slot && (slot.item !== held.item || slot.durability !== held.durability))) return false;
+    if (ITEMS[held.item].tool || ITEMS[held.item].armor || ITEMS[held.item].unique) return false;
+    if (area === 'fuel' && (definition.energy.type !== 'thermal' || !definition.energy.acceptedFuels.includes(held.item))) return false;
+    if (area === 'input' && !processingRecipes.compatible(definition).some(r => r.inputs.some(s => s.item === held.item))) return false;
+    const amount = Math.min(held.amount, definition.storage!.stackLimit - (slot?.amount ?? 0), value === 1 ? 1 : Infinity);
+    if (!Number.isSafeInteger(amount) || amount <= 0 || !this.bag.takeCursor(amount)) return false;
+    station[area][index] = { ...held, amount: (slot?.amount ?? 0) + amount };
+    station.revision++; return true;
   }
   executeCommand(line: string) {
     return this.commands.executeLine(line, 'player');
@@ -316,6 +388,14 @@ export class Expedition {
   private performOpenWorkbench(aim: Point) {
     const target = this.aimedContact(aim);
     if (target?.kind !== 'block' || target.tx !== Math.floor(aim.x / TILE) || target.ty !== Math.floor(aim.y / TILE)) return false;
+    const definition = stationRegistry.forBlock(target.id);
+    if (definition?.mode === 'processing') {
+      const instance = this.stations.getAt(target.tx, target.ty);
+      if (!instance) return false;
+      this.openedStationId = instance.id;
+      this.bag.changeGrid(2);
+      return true;
+    }
     const result = BLOCK_SCRIPTS[target.id].placed.onInteract?.({ x: target.tx, y: target.ty });
     if (
       typeof result !== 'object' ||
@@ -324,9 +404,7 @@ export class Expedition {
       result.openCraft !== true
     )
       return false;
-    const station = 'station' in result &&
-      (result.station === 'mill' || result.station === 'oven' || result.station === 'workbench')
-      ? result.station : 'workbench';
+    const station = definition?.mode === 'crafting' ? definition.id : 'workbench';
     const gridSize = 'gridSize' in result && result.gridSize === 2 ? 2 : 3;
     this.bag.changeGrid(gridSize, station);
     return true;
@@ -335,6 +413,11 @@ export class Expedition {
     return this.commands.run(this.actions.closeCraft());
   }
   private performCloseCraft() {
+    if (this.openedStationId) {
+      const station = this.stations.getById(this.openedStationId);
+      if (station) this.processing.setManualWork(station, false);
+      this.openedStationId = null;
+    }
     const unresolved = this.bag.cancelCursorTransaction();
     this.bag.changeGrid(2);
     if (!unresolved) return;
@@ -658,6 +741,13 @@ export class Expedition {
     if (placePressed) this.commands.run(this.actions.build(controls.aim));
     const p = this.player;
     const region = SimulationRegion.around(p);
+    if (this.openedStationId) {
+      const station = this.stations.getById(this.openedStationId);
+      if (!station || !this.stationReachable(station)) {
+        if (station) this.processing.setManualWork(station, false);
+        this.openedStationId = null;
+      }
+    }
     this.processing.step(dt, this.stations.active(region));
     this.mobs = this.entityRegions.activate(region);
     const activeMobs = this.entityUpdates.select(this.mobs, region);
@@ -751,6 +841,7 @@ export class Expedition {
     const undergroundDepth = this.player.y / TILE - this.world.heightAt(playerTileX);
     return {
       world: this.world,
+      stationVisualAt: (x: number, y: number) => this.stationVisualAt(x, y),
       player: this.player,
       equipment: this.bag.saveEquipment(),
       mobs: this.mobs.map((m) => m.view()),
