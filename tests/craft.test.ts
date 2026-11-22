@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Inventory, startingSlots } from '../src/business/inventory/Inventory';
-import { RecipeBook, recipes } from '../src/business/craft/RecipeBook';
+import { RecipeBook } from '../src/business/craft/RecipeBook';
+import { defaultContent } from '../src/assets/runtime';
+
+const recipes = defaultContent.recipes;
+const startSlots = (stock: Record<string, number> = {}, gear: readonly string[] = []) => startingSlots(stock, gear, defaultContent.materials);
+const createInventory = (slots?: readonly Slot[], equipment?: readonly Slot[]) => new Inventory(defaultContent.recipes, defaultContent.materials, slots, equipment);
 import { Expedition } from '../src/business/Expedition';
 import { B, BELT_SIZE, TILE, WORLD_W, type Slot, type SlotRef } from '../src/business/catalog';
 import { Slime } from '../src/business/entities/Slime';
@@ -31,7 +36,7 @@ test('cada entidade e ferramenta fornece todos os estados visuais que utiliza', 
 });
 
 test('quatro tábuas em quatro células produzem uma bancada somente ao retirar a saída', () => {
-  const pack = new Inventory();
+  const pack = createInventory();
   for (let i = 0; i < 4; i++) assert.ok(pack.move(bag(4), grid(0)));
   assert.equal(pack.snapshot().result, null);
   assert.equal(pack.takeResult(), null);
@@ -48,7 +53,7 @@ test('quatro tábuas em quatro células produzem uma bancada somente ao retirar 
 test('o livro lista somente receitas disponíveis e o clique pode preencher a grade', () => {
   const slots = Array.from({ length: BELT_SIZE * 4 }, (): Slot => null);
   slots[BELT_SIZE] = { item: 'plank', amount: 4 };
-  const inventory = new Inventory(slots);
+  const inventory = createInventory(slots);
   const workbench = recipes.recipes.findIndex((recipe) => recipe.output.item === 'workbench');
   const boots = recipes.recipes.findIndex((recipe) => recipe.output.item === 'leatherBoots');
   assert.ok(inventory.craftableRecipes().some((entry) => entry.index === workbench));
@@ -61,7 +66,7 @@ test('o livro lista somente receitas disponíveis e o clique pode preencher a gr
 test('clique carrega a pilha na mão e o arrasto divide incluindo o primeiro slot', () => {
   const slots = Array.from({ length: BELT_SIZE * 4 }, (): Slot => null);
   slots[0] = { item: 'dirt', amount: 64 };
-  const inventory = new Inventory(slots);
+  const inventory = createInventory(slots);
   assert.equal(inventory.click({ area: 'bag', index: 0 }), true);
   assert.deepEqual(inventory.snapshot().cursor, { item: 'dirt', amount: 64 });
   const targets = [1, 2, 3, 4, 5].map((index) => ({ area: 'bag' as const, index }));
@@ -76,14 +81,14 @@ test('clicar no resultado prioriza barra, depois mochila e por fim o cursor', ()
   const workbench = recipes.recipes.findIndex((recipe) => recipe.output.item === 'workbench');
   const open = Array.from({ length: BELT_SIZE * 4 }, (): Slot => null);
   open[BELT_SIZE] = { item: 'plank', amount: 4 };
-  const withSpace = new Inventory(open);
+  const withSpace = createInventory(open);
   assert.equal(withSpace.fillRecipe(workbench), true);
   assert.equal(withSpace.takeResult()?.item, 'workbench');
   assert.equal(withSpace.snapshot().slots[0]?.item, 'workbench');
 
   const full = Array.from({ length: BELT_SIZE * 4 }, (): Slot => ({ item: 'dirt', amount: 1 }));
   full[BELT_SIZE] = { item: 'plank', amount: 5 };
-  const withoutSpace = new Inventory(full);
+  const withoutSpace = createInventory(full);
   assert.equal(withoutSpace.fillRecipe(workbench), true);
   assert.equal(withoutSpace.takeResult()?.item, 'workbench');
   assert.equal(withoutSpace.snapshot().cursor?.item, 'workbench');
@@ -94,7 +99,7 @@ test('resultado do craft completa uma stack existente antes de abrir novo slot',
   // The wood recipe outputs six planks; keep an existing plank stack elsewhere.
   slots[0] = { item: 'plank', amount: 3 };
   slots[BELT_SIZE] = { item: 'wood', amount: 2 };
-  const inventory = new Inventory(slots);
+  const inventory = createInventory(slots);
   assert.ok(inventory.move(bag(BELT_SIZE), grid(0)));
   assert.ok(inventory.move(bag(BELT_SIZE), grid(1)));
   assert.deepEqual(inventory.takeResult(), { item: 'plank', amount: 6 });
@@ -106,7 +111,7 @@ test('ferramentas e armaduras sempre ocupam slots individuais', () => {
   const slots = Array.from({ length: BELT_SIZE * 4 }, (): Slot => null);
   slots[0] = { item: 'pickaxe', amount: 2, durability: 96 };
   slots[1] = { item: 'leatherHelmet', amount: 2, durability: 80 };
-  const inventory = new Inventory(slots);
+  const inventory = createInventory(slots);
   const picks = inventory.snapshot().slots.filter(slot => slot?.item === 'pickaxe');
   const helmets = inventory.snapshot().slots.filter(slot => slot?.item === 'leatherHelmet');
   assert.deepEqual(picks.map(slot => slot?.amount), [1, 1]);
@@ -115,7 +120,7 @@ test('ferramentas e armaduras sempre ocupam slots individuais', () => {
   assert.equal(inventory.snapshot().slots.filter(slot => slot?.item === 'pickaxe').length, 4);
 });
 test('prévia distribui múltiplos slots sem alterar o item no cursor', () => {
-  const pack = new Inventory(startingSlots({ wood: 13 }));
+  const pack = createInventory(startSlots({ wood: 13 }));
   const source = { area: 'bag' as const, index: 3 };
   assert.ok(pack.click(source));
   assert.equal(pack.snapshot().cursor?.item, 'wood');
@@ -139,13 +144,13 @@ test('prévia distribui múltiplos slots sem alterar o item no cursor', () => {
 });
 
 test('fechar o inventário cancela a seleção na origem ou no primeiro slot vazio', () => {
-  const origin = new Inventory([{ item: 'wood', amount: 7 }]);
+  const origin = createInventory([{ item: 'wood', amount: 7 }]);
   assert.ok(origin.click(bag(0)));
   assert.equal(origin.cancelCursorTransaction(), null);
   assert.deepEqual(origin.at(0), { item: 'wood', amount: 7 });
   assert.equal(origin.snapshot().cursor, null);
 
-  const swapped = new Inventory([
+  const swapped = createInventory([
     { item: 'wood', amount: 2 },
     { item: 'dirt', amount: 3 },
   ]);
@@ -160,7 +165,7 @@ test('fechar o inventário cancela a seleção na origem ou no primeiro slot vaz
 test('cancelar a transação devolve a pilha para o mundo quando todos os slots estão ocupados', () => {
   const slots = Array.from({ length: BELT_SIZE * 4 }, () => ({ item: 'wood', amount: 1 }));
   slots[0] = { item: 'wood', amount: 5 };
-  const inventory = new Inventory(slots);
+  const inventory = createInventory(slots);
   assert.ok(inventory.click(bag(0)));
   assert.ok(inventory.distribute([bag(0), bag(1)]));
   assert.deepEqual(inventory.cancelCursorTransaction(), { item: 'wood', amount: 1 });
@@ -169,7 +174,7 @@ test('cancelar a transação devolve a pilha para o mundo quando todos os slots 
 });
 
 test('combinar, trocar e separar pilhas usa os mesmos slots para mochila e barra', () => {
-  const pack = new Inventory();
+  const pack = createInventory();
   assert.ok(pack.move(bag(0), bag(8)));
   assert.equal(pack.at(8)?.item, 'pickaxe');
   assert.ok(pack.move(bag(3), bag(4)));
@@ -194,7 +199,7 @@ test('uma receita nova é reconhecida por posição relativa, orientação, lacu
       ],
       output,
     },
-  ]);
+  ], defaultContent.materials);
   const items = (ids: (string | null)[]) => ids.map((id) => (id ? { item: id, amount: 10 } : null));
   assert.deepEqual(
     book.match(items([null, null, null, 'coal', null, 'coal', null, 'wood', null]), 3)?.output,
@@ -211,10 +216,10 @@ test('uma receita nova é reconhecida por posição relativa, orientação, lacu
   assert.equal(book.match(items(['coal', null, null, 'wood']), 2), undefined);
 });
 test('fechar, salvar e restaurar devolve ingredientes pendentes sem duplicação', () => {
-  const pack = new Inventory(startingSlots({ plank: 4 }));
+  const pack = createInventory(startSlots({ plank: 4 }));
   pack.changeGrid(3);
   for (let i = 0; i < 4; i++) pack.move(bag(4), grid(i));
-  const restored = new Inventory(pack.saveSlots());
+  const restored = createInventory(pack.saveSlots());
   assert.equal(restored.count('plank'), 4);
   assert.equal(pack.count('plank'), 0);
   pack.changeGrid(2);
@@ -225,11 +230,11 @@ test('itens de drop e craft consumíveis são classificados pelos assets', () =>
   const game = new Expedition('ITEM-ASSETS');
   const selected = game.inventory.slots.findIndex((slot) => slot?.item === 'beef');
   assert.equal(selected, -1);
-  const pack = new Inventory(startingSlots({ beef: 2 }));
+  const pack = createInventory(startSlots({ beef: 2 }));
   assert.equal(pack.count('beef'), 2);
   const book = new RecipeBook([
     { pattern: [['raw_meat']], output: { item: 'cooked_beef', amount: 1 } },
-  ]);
+  ], defaultContent.materials);
   assert.deepEqual(
     book.match([{ item: 'raw_meat', amount: 1 }], 1)?.output,
     { item: 'cooked_beef', amount: 1 },
@@ -242,7 +247,7 @@ test('farinha e pão não são mais produzidos instantaneamente no crafting', ()
 });
 
 test('a massa devolve o balde vazio', () => {
-  const pack = new Inventory(startingSlots({ flour: 3, waterBucket: 1 }));
+  const pack = createInventory(startSlots({ flour: 3, waterBucket: 1 }));
   pack.changeGrid(3, 'workbench');
   const index = recipes.recipes.findIndex(r => r.output.item === 'dough');
   const before = pack.count('bucket');
@@ -254,7 +259,7 @@ test('a massa devolve o balde vazio', () => {
 });
 
 test('picaretas podem ser fabricadas novamente quando há materiais suficientes', () => {
-  const pack = new Inventory(startingSlots({ stone: 6, wood: 4 }));
+  const pack = createInventory(startSlots({ stone: 6, wood: 4 }));
   pack.changeGrid(3, 'workbench');
   const recipe = recipes.recipes.findIndex((entry) => entry.output.item === 'stonePick');
   assert.equal(pack.fillRecipe(recipe), true);

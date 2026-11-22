@@ -5,8 +5,11 @@ import { World } from '../src/business/world/World';
 import { GAME_DAY_SECONDS } from '../src/business/time';
 import { blockPartitionAt } from '../src/business/simulation/BlockPartitionScheduler';
 import { SimulationRegion } from '../src/business/simulation/SimulationRegion';
-import { featureGenerator } from '../src/business/worldgen/FeatureGenerator';
+import { FeatureGenerator } from '../src/business/worldgen/FeatureGenerator';
+import { defaultContent } from '../src/assets/runtime';
 import { hashText, mixHash } from '../src/shared/math';
+
+const featureGenerator = new FeatureGenerator(defaultContent.structures);
 
 const y = 24;
 const regionAt = (x: number) => SimulationRegion.around({ x: x * 24, y: y * 24, w: 1, h: 1 });

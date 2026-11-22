@@ -12,7 +12,7 @@ test('registry valida e resolve IDs sem ensinar minérios concretos à estratég
     id: 'test-ore', strategy: 'ore-vein', block: 'COAL', replace: ['STONE'],
     minDepth: 4, maxDepth: 12, rarity: 0.2, maxRadius: 2, salt: 0x7711,
   } satisfies OreDepositFeature;
-  const deposits = new FeatureRegistry().ore([feature]);
+  const deposits = new FeatureRegistry(B).ore([feature]);
   assert.equal(deposits[0].block, B.COAL);
   assert.equal(deposits[0].replace.has(B.STONE), true);
 
@@ -25,8 +25,8 @@ test('registry valida e resolve IDs sem ensinar minérios concretos à estratég
   }));
   assert.ok(cells.includes(B.COAL));
 
-  assert.throws(() => new FeatureRegistry().ore([{ ...feature, id: 'unknown', block: 'NOT_A_BLOCK' }]));
-  assert.throws(() => new FeatureRegistry().ore([{ ...feature, id: 'invalid', maxRadius: 0 }]));
+  assert.throws(() => new FeatureRegistry(B).ore([{ ...feature, id: 'unknown', block: 'NOT_A_BLOCK' }]));
+  assert.throws(() => new FeatureRegistry(B).ore([{ ...feature, id: 'invalid', maxRadius: 0 }]));
 });
 
 function regionChecksum(world: World, left: number, right: number) {

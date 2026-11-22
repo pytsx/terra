@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ChunkStore } from '../src/business/world/ChunkStore';
 import type { TerrainColumn } from '../src/business/worldgen/TerrainColumn';
-import { EntityRegistry } from '../src/business/entities/EntityRegistry';
+import { defaultContent } from '../src/assets/runtime';
+const entities = defaultContent.entities;
 import { PerformanceMonitor } from '../src/app/PerformanceMonitor';
 import { RegionalEntityStore } from '../src/business/entities/RegionalEntityStore';
 import { SimulationRegion } from '../src/business/simulation/SimulationRegion';
@@ -26,11 +27,11 @@ test('ChunkStore materializa seções sob demanda e atualiza o LRU ao consultar 
 });
 
 test('estado completo e identidade de uma criatura sobrevivem ao round-trip', () => {
-  const cow = EntityRegistry.create('cow', 120, 240, 7, true)!;
+  const cow = entities.create('cow', 120, 240, 7, true)!;
   cow.hit(-1, 2);
-  const first = EntityRegistry.save(cow);
-  const restored = EntityRegistry.restore(first)!;
-  const second = EntityRegistry.save(restored);
+  const first = entities.save(cow);
+  const restored = entities.restore(first)!;
+  const second = entities.save(restored);
   assert.deepEqual(second, first);
   assert.equal(restored.view().baby, true);
 });
@@ -50,27 +51,27 @@ test('métricas mantêm janela limitada e calculam P95 e custo por sistema', () 
 });
 
 test('entidades fora da região ativa são suspensas e reidratadas com o mesmo estado', () => {
-  const near = EntityRegistry.create('cow', 0, 24 * TILE, 11, true)!;
-  const far = EntityRegistry.create('wolf', CHUNK_WIDTH * 4 * TILE, 24 * TILE, 12)!;
+  const near = entities.create('cow', 0, 24 * TILE, 11, true)!;
+  const far = entities.create('wolf', CHUNK_WIDTH * 4 * TILE, 24 * TILE, 12)!;
   far.hit(-1, 2);
-  const farSave = EntityRegistry.save(far);
-  const store = new RegionalEntityStore(undefined, [EntityRegistry.save(near), farSave]);
+  const farSave = entities.save(far);
+  const store = new RegionalEntityStore(undefined, [entities.save(near), farSave], entities);
   const nearRegion = SimulationRegion.around({ x: 0, y: 24 * TILE, w: 1, h: 1 });
   assert.deepEqual(store.activate(nearRegion).map(entity => entity.view().kind), ['cow']);
   assert.equal(store.stats.sleepingRegionEntities, 1);
   const farRegion = SimulationRegion.around({ x: CHUNK_WIDTH * 4 * TILE, y: 24 * TILE, w: 1, h: 1 });
   const awakened = store.activate(farRegion);
   assert.deepEqual(awakened.map(entity => entity.view().kind), ['wolf']);
-  assert.equal(EntityRegistry.save(awakened[0]).health, farSave.health);
+  assert.equal(entities.save(awakened[0]).health, farSave.health);
   assert.equal(store.stats.sleepingRegionEntities, 1);
 });
 
 test('ativação estável preserva instâncias ativas sem tocar regiões históricas', () => {
-  const entity = EntityRegistry.create('cow', 0, 24 * TILE, 3)!;
+  const entity = entities.create('cow', 0, 24 * TILE, 3)!;
   const historical = Array.from({ length: 600 }, (_, x) => [x + 20, 0, [
-    { ...EntityRegistry.save(entity), id: `hist-${x}` },
+    { ...entities.save(entity), id: `hist-${x}` },
   ]] as const);
-  const store = new RegionalEntityStore(historical);
+  const store = new RegionalEntityStore(historical, [], entities);
   const region = SimulationRegion.around({ x: 0, y: 24 * TILE, w: 1, h: 1 });
   store.add(entity);
   const first = store.activate(region);
@@ -82,7 +83,7 @@ test('ativação estável preserva instâncias ativas sem tocar regiões histór
 });
 
 test('codec preserva todas as regiões e entidades válidas sem truncamento silencioso', () => {
-  const prototype = EntityRegistry.save(EntityRegistry.create('cow', 120, 240, 9)!);
+  const prototype = entities.save(entities.create('cow', 120, 240, 9)!);
   const entityRegions = Array.from({ length: 513 }, (_, region) => [region, 0, [
     ...Array.from({ length: 257 }, (_, entity) => ({ ...prototype, id: `entity-${region}-${entity}` })),
   ]]);

@@ -139,14 +139,14 @@ export class Expedition {
       new CommandBus<WeatherCommandContext & PlacementCommandContext>(this),
     ));
     this.explore();
-    this.bag = new Inventory(save?.slots, save?.equipment, this.content.recipes, this.content.materials);
+    this.bag = new Inventory(this.content.recipes, this.content.materials, save?.slots, save?.equipment);
     this.explorer.syncMaxLife(this.bag.maxLife(), !save);
     this.selected = save?.selected ?? 0;
     this.elapsed = save?.elapsed ?? 0;
     this.zoom = save?.zoom ?? 1;
     this.placementMode = save?.placementMode ?? 'approach';
     this.drops = new DroppedItems(save?.drops);
-    this.stations = new StationStore(save?.stations, this.content.stations);
+    this.stations = new StationStore(this.content.stations, save?.stations);
     this.terrain.hydrology.onWaterFlow((x, y, volume) => {
       const station = this.stations.getAt(x, y - 1);
       if (station && this.content.stations.get(station.definitionId)?.energy.type === 'hydraulic')

@@ -2,9 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { StationStore } from '../src/business/stations/StationStore';
 import { ProcessingSystem } from '../src/business/stations/ProcessingSystem';
+import { defaultContent } from '../src/assets/runtime';
+
+const createStore = (save?: any) => new StationStore(defaultContent.stations, save);
+const createSystem = () => new ProcessingSystem(defaultContent.stations, defaultContent.processes, defaultContent.fuels, defaultContent.materials);
 
 test('moinho exige trabalho manual, conserva progresso e produz apenas uma vez', () => {
-  const store = new StationStore(), system = new ProcessingSystem();
+  const store = createStore(), system = createSystem();
   const mill = store.create('mill', 0, 12);
   const other = store.create('mill', 1, 12);
   assert.notEqual(mill.id, other.id);
@@ -18,7 +22,7 @@ test('moinho exige trabalho manual, conserva progresso e produz apenas uma vez',
   system.setManualWork(mill, false);
   system.step(10, [mill]);
   assert.equal(mill.process?.elapsedWork, 2);
-  const restored = new StationStore(store.save());
+  const restored = createStore(store.save());
   const loaded = restored.getById(mill.id)!;
   assert.equal(loaded.manualWork, false);
   assert.equal(loaded.process?.elapsedWork, 2);
@@ -31,7 +35,7 @@ test('moinho exige trabalho manual, conserva progresso e produz apenas uma vez',
 });
 
 test('forno desabilitado não inicia lote nem combustível; forno ativo assa e preserva estado', () => {
-  const store = new StationStore(), system = new ProcessingSystem();
+  const store = createStore(), system = createSystem();
   const oven = store.create('oven', 0, 12);
   assert.equal(system.insert(oven, 'input', { item: 'dough', amount: 1 }), 0);
   assert.equal(system.insert(oven, 'fuel', { item: 'wood', amount: 1 }), 0);
@@ -44,13 +48,13 @@ test('forno desabilitado não inicia lote nem combustível; forno ativo assa e p
   for (let i = 0; i < 600; i++) system.step(1/60, [oven]);
   assert.equal(oven.output[0], null);
   assert.ok(oven.energyState.burningFuel);
-  const restored = new StationStore(store.save()).getById(oven.id)!;
+  const restored = createStore(store.save()).getById(oven.id)!;
   for (let i = 0; i < 1800; i++) system.step(1/60, [restored]);
   assert.deepEqual(restored.output[0], { item: 'bread', amount: 1 });
 });
 
 test('cancelar e remover estação conserva ingredientes sem repetir a recuperação', () => {
-  const store = new StationStore(), system = new ProcessingSystem();
+  const store = createStore(), system = createSystem();
   const mill = store.create('mill', -1, 12);
   system.insert(mill, 'input', { item: 'wheat', amount: 3 });
   system.step(1, [mill]);
@@ -63,7 +67,7 @@ test('cancelar e remover estação conserva ingredientes sem repetir a recupera�
 });
 
 test('receitas artesanais compartilham capacidades e regras centralizadas de slots', () => {
-  const store = new StationStore(), system = new ProcessingSystem();
+  const store = createStore(), system = createSystem();
   const mill = store.create('mill', 0, 12);
   assert.equal(system.insertAt(mill, 'input', 0, { item: 'gravel', amount: 3 }, 1), 2);
   assert.equal(system.insertAt(mill, 'input', 0, { item: 'wood', amount: 1 }), 1);

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { B, BLOCKS, CHUNK_WIDTH, TILE } from '../src/business/catalog';
 import { World } from '../src/business/world/World';
-import { EntityRegistry } from '../src/business/entities/EntityRegistry';
+import { defaultContent } from '../src/assets/runtime';
+const entities = defaultContent.entities;
 import { Expedition } from '../src/business/Expedition';
 import { decodeSave } from '../src/store/codec';
 import { RNG } from '../src/shared/math';
@@ -195,7 +196,7 @@ test('volumes fracionários são conservados no save/load', () => {
 
 test('uma raposa consome água disponível e pode morrer de fome mesmo hidratada', () => {
   const world = basin(B.STONE), rng = new RNG(42);
-  const fox = EntityRegistry.create('fox', TILE, 10 * TILE - 17, 0)!;
+  const fox = entities.create('fox', TILE, 10 * TILE - 17, 0)!;
   world.set(1, 9, B.WATER, false);
   for (let frame = 0; frame < 280 * 30 && !fox.dead; frame++)
     fox.step(1 / 30, world, fox.view(), rng, [fox], 0);
@@ -207,7 +208,7 @@ test('uma raposa consome água disponível e pode morrer de fome mesmo hidratada
 
 test('caçar repõe nutrição mas não impede a morte por desidratação', () => {
   const world = basin(B.STONE), rng = new RNG(7);
-  const fox = EntityRegistry.create('fox', TILE, 10 * TILE - 17, 0)!;
+  const fox = entities.create('fox', TILE, 10 * TILE - 17, 0)!;
   const simulate = (seconds: number, prey?: typeof fox) => {
     const residents = prey ? [fox, prey] : [fox];
     for (let frame = 0; frame < seconds * 30 && !fox.dead; frame++)
@@ -215,7 +216,7 @@ test('caçar repõe nutrição mas não impede a morte por desidratação', () =
   };
   simulate(100);
   const before = Number(fox.view().nutrition);
-  const rabbit = EntityRegistry.create('rabbit', fox.view().x, fox.view().y, 1)!;
+  const rabbit = entities.create('rabbit', fox.view().x, fox.view().y, 1)!;
   simulate(2, rabbit);
   assert.ok(rabbit.dead && Number(fox.view().nutrition) > before);
   simulate(95);
@@ -346,7 +347,7 @@ test('o explorador e um animal submersos sobem e flutuam na superfície parcial'
   }
   w.hydrology.restore(water);
   const player = new Explorer(w, { x: 0, y: 14 * TILE, life: 5, depthMax: 0, placed: 0 });
-  const fox = EntityRegistry.create('fox', TILE, 14 * TILE, 0)!;
+  const fox = entities.create('fox', TILE, 14 * TILE, 0)!;
   for (let i = 0; i < 300; i++) {
     player.step(1/60, { direction: 0, jump: false, sprint: false }, w);
     fox.step(1/60, w, player.view(), rng);

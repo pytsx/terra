@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { B, TILE, placedTile } from '../src/business/catalog';
 import { Expedition } from '../src/business/Expedition';
-import { recipes } from '../src/business/craft/RecipeBook';
-import { EntityRegistry } from '../src/business/entities/EntityRegistry';
+import { defaultContent } from '../src/assets/runtime';
+const recipes = defaultContent.recipes;
+const entities = defaultContent.entities;
 import { SimulationRegion } from '../src/business/simulation/SimulationRegion';
 import { blockPartitionAt } from '../src/business/simulation/BlockPartitionScheduler';
 import { World } from '../src/business/world/World';
@@ -18,10 +19,10 @@ test('compilação rejeita colisão com o catálogo, substrato ausente e efeito 
   assert.throws(() => extendItems([{ id: 'test:invalid', schemaVersion: 1,
     items: { flour: { name: 'Duplicada' } } }], { flour: {} }), /test:invalid.*flour/);
   assert.throws(() => compileSurfaceScatter([{ id: 'unknown-soil', block: 'HERB_SHOOT',
-    substrate: 'MISSING', sinceGeneration: 6, minHumidity: 0.2, probability: 1 }]), /unknown-soil/);
+    substrate: 'MISSING', sinceGeneration: 6, minHumidity: 0.2, probability: 1 }], B), /unknown-soil/);
   assert.throws(() => new TransformationRegistry([{ id: 'unknown-action', source: 'GRASS',
     duration: { seconds: 1, mode: 'continuous' }, conditions: { property: 'water.volume', operator: '>', value: 0 },
-    action: { type: 'unexpected' } } as unknown as TransformationAsset]), /Efeito desconhecido/);
+    action: { type: 'unexpected' } } as unknown as TransformationAsset], defaultContent.structures, defaultContent.materials), /Efeito desconhecido/);
 });
 
 test('a campina e as flores aparecem na geração nova e preservam o terreno anterior', () => {
@@ -108,12 +109,12 @@ test('colheita, almofariz, recarga de um lote, fabricação e cura pelos comando
 });
 
 test('espécie do pacote usa o habitat, a prioridade de fuga e a persistência de organismos', () => {
-  const deer = EntityRegistry.create('marshDeer', 100, 200, 42)!;
-  const saved = EntityRegistry.save(deer);
-  assert.deepEqual(EntityRegistry.save(EntityRegistry.restore(saved)!), saved);
-  const weight = (biome: string) => EntityRegistry.spawnPool(B.GRASS, biome).find(s => s.id === 'marshDeer')!.weight;
+  const deer = entities.create('marshDeer', 100, 200, 42)!;
+  const saved = entities.save(deer);
+  assert.deepEqual(entities.save(entities.restore(saved)!), saved);
+  const weight = (biome: string) => entities.spawnPool(B.GRASS, biome).find(s => s.id === 'marshDeer')!.weight;
   assert.equal(weight('Campina úmida'), 2 * weight('Pradaria'));
-  const species = EntityRegistry.asset('marshDeer')!;
+  const species = entities.asset('marshDeer')!;
   assert.ok('act' in species.script);
   const habitat = {
     night: true, rainy: false, depth: 0, face: 1, homeDistance: 0, depthBelowHome: 0, clock: 0,
@@ -134,7 +135,7 @@ test('roda só mói trigo quando a hidrologia transfere água sob o moinho', () 
   }
   initial.edits.push([x, y, B.WATERMILL], [x, y+1, B.AIR]);
   initial.water = [[x, y+1, 1000]];
-  const stations = new StationStore();
+  const stations = new StationStore(defaultContent.stations);
   stations.create('watermill', x, y).input[0] = { item: 'wheat', amount: 1 };
   initial.stations = stations.save();
   const run = (game: Expedition) => {

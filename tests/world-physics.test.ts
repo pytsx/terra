@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { B, TILE, WORLD_W } from '../src/business/catalog';
 import { World } from '../src/business/world/World';
-import { EntityRegistry } from '../src/business/entities/EntityRegistry';
+import { defaultContent } from '../src/assets/runtime';
+const entities = defaultContent.entities;
 import { Actor } from '../src/business/entities/Actor';
 import { tracePlacement, traceTool } from '../src/business/toolTarget';
 import { Expedition } from '../src/business/Expedition';
@@ -15,9 +16,9 @@ test('o primeiro contato no rumo do golpe vence entre blocos e criaturas', () =>
   const world = new World('AURORA-1264'),
     player = { x: 240, y: 225, w: 18, h: 30, vx: 0, face: 1, ground: true };
   const aim = { x: 600, y: 240 };
-  const behind = EntityRegistry.create('cow', 200, 230, 0)!,
-    front = EntityRegistry.create('cow', 270, 230, 0)!,
-    far = EntityRegistry.create('wolf', 300, 230, 0)!;
+  const behind = entities.create('cow', 200, 230, 0)!,
+    front = entities.create('cow', 270, 230, 0)!,
+    far = entities.create('wolf', 300, 230, 0)!;
   const trace = () => traceTool(world, player, aim, 80, [far, behind, front]).hit;
   const first = trace();
   assert.equal(first?.kind, 'entity');
@@ -187,8 +188,8 @@ for (const kind of ['slime', 'wolf', 'cow']) {
       w.set(x, floor, B.STONE);
       if (x >= edge) w.set(x, floor - 1, B.STONE);
     }
-    const height = EntityRegistry.asset(kind).config.height;
-    const mob = EntityRegistry.create(kind, (edge - 2) * TILE, floor * TILE - height, 1)!;
+    const height = entities.asset(kind).config.height;
+    const mob = entities.create(kind, (edge - 2) * TILE, floor * TILE - height, 1)!;
     const player = {
       x: (kind === 'cow' ? edge - 3 : edge + 3) * TILE,
       y: floor * TILE - 30,

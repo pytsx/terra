@@ -1,7 +1,4 @@
 import type { Materials } from '../content/Materials';
-import { production } from '../../assets/production';
-import { legacyMaterials } from '../content/Materials';
-
 import type { FuelDefinition, ProcessingRecipe, StationDefinition } from './StationTypes';
 
 export class StationRegistry {
@@ -92,6 +89,4 @@ export function compileProduction(definitions: ProductionDefinitions, materials:
     for (const item of definition.energy.acceptedFuels) if (!fuels.has(item)) throw new Error('Combustível sem definição: ' + item);
   return { stationRegistry, processingRecipes, fuels };
 }
-/** @deprecated Compatibility facades; simulations receive these through RuntimeContent. */
-export const { stationRegistry, processingRecipes, fuels } = compileProduction(production, legacyMaterials);
 

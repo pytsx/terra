@@ -4,6 +4,7 @@ import { Expedition, type Controls } from '../src/business/Expedition';
 import { B, TILE, WORLD_W, WORLD_H } from '../src/business/catalog';
 import { World } from '../src/business/world/World';
 import { startingSlots } from '../src/business/inventory/Inventory';
+import { defaultContent } from '../src/assets/runtime';
 import { Explorer } from '../src/business/entities/Explorer';
 const idle: Controls = {
   direction: 0,
@@ -94,7 +95,7 @@ test('mineração, construção, custos e alterações do terreno sobrevivem ao 
 test('melhorias modificam mineração e iluminação e permanecem equipadas', () => {
   const { game: base, tx: x, ty: y } = miningSite();
   const saved = base.save();
-  saved.slots = startingSlots({ copper: 4, crystal: 2 });
+  saved.slots = startingSlots({ copper: 4, crystal: 2 }, [], defaultContent.materials);
   const tx = Math.floor(base.player.x / TILE) - 1,
     ty = base.world.heightAt(tx) - 1;
   saved.edits.push([ty * WORLD_W + tx, B.WORKBENCH]);

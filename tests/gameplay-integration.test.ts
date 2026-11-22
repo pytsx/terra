@@ -6,6 +6,7 @@ import { B, TILE, LEGACY_WORLD_H } from '../src/business/catalog';
 import { World } from '../src/business/world/World';
 import { Camera } from '../src/render/Camera';
 import { decodeSave } from '../src/store/codec';
+import { defaultContent } from '../src/assets/runtime';
 
 const idle: Controls = {
   aim: { x: 600, y: 245 }, direction: 0, jump: false, sprint: false, mine: false, place: false,
@@ -88,7 +89,7 @@ test('descartar, recarregar e recolher preserva desgaste e a quantidade integral
 test('duas ferramentas com desgaste diferente podem trocar de slot sem fundir', () => {
   const a = { item: 'pickaxe', amount: 1, durability: 8 };
   const b = { ...a, durability: 42 };
-  const bag = new Inventory([a, b]);
+  const bag = new Inventory(defaultContent.recipes, defaultContent.materials, [a, b]);
   assert.ok(bag.move({ area: 'bag', index: 0 }, { area: 'bag', index: 1 }));
   assert.deepEqual(bag.saveSlots(), [b, a]);
 });

@@ -72,7 +72,7 @@ export class RegionalEntityStore {
     this.reindexActive();
     const result: EntityRegionSave[] = [];
     for (const [key, bucket] of this.regions) {
-      const entities = [...bucket.sleeping, ...bucket.active.filter(entity => !entity.dead).map(this.entities.save)];
+      const entities = [...bucket.sleeping, ...bucket.active.filter(entity => !entity.dead).map(entity => this.entities.save(entity))];
       if (!entities.length) continue;
       const [rx, ry] = this.coords(key);
       result.push([rx, ry, entities]);
@@ -101,7 +101,7 @@ export class RegionalEntityStore {
 
   private sleep(bucket: RegionBucket) {
     if (!bucket.active.length) return;
-    bucket.sleeping.push(...bucket.active.filter(entity => !entity.dead).map(this.entities.save));
+    bucket.sleeping.push(...bucket.active.filter(entity => !entity.dead).map(entity => this.entities.save(entity)));
     bucket.active = [];
   }
 

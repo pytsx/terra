@@ -1,13 +1,12 @@
 import type { Materials } from '../content/Materials';
-import { legacyMaterials } from '../content/Materials';
 import { type Stack } from '../EngineTypes';
-import { fuels, processingRecipes, stationRegistry, type ProcessingRecipeRegistry, type StationRegistry } from './StationRegistry';
+import type { ProcessingRecipeRegistry, StationRegistry } from './StationRegistry';
 import type { FuelDefinition, ProcessingRecipe, StationInstance } from './StationTypes';
 import { canStore, countItem, store, storeAt, take, takeAt } from './SlotStorage';
 
 export class ProcessingSystem {
-  constructor(private readonly stations: StationRegistry = stationRegistry, private readonly recipes: ProcessingRecipeRegistry = processingRecipes,
-    private readonly fuelTypes: Pick<ReadonlyMap<string, FuelDefinition>, 'get'> = fuels, private readonly materials: Materials = legacyMaterials) {}
+  constructor(private readonly stations: StationRegistry, private readonly recipes: ProcessingRecipeRegistry,
+    private readonly fuelTypes: Pick<ReadonlyMap<string, FuelDefinition>, 'get'>, private readonly materials: Materials) {}
   completed = 0;
   status(station: StationInstance) {
     const definition = this.stations.get(station.definitionId)!;

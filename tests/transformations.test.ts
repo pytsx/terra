@@ -8,8 +8,12 @@ import { BlockTransformationSystem } from '../src/business/simulation/BlockTrans
 import { blockPartitionAt } from '../src/business/simulation/BlockPartitionScheduler';
 import { SimulationRegion } from '../src/business/simulation/SimulationRegion';
 import { TransformationEvaluator } from '../src/business/simulation/TransformationEvaluator';
-import { TransformationRegistry, transformationRegistry } from '../src/business/simulation/TransformationRegistry';
+import { TransformationRegistry } from '../src/business/simulation/TransformationRegistry';
+import { defaultContent } from '../src/assets/runtime';
 import { hashText, mixHash } from '../src/shared/math';
+
+const createRegistry = (assets: readonly TransformationAsset[]) =>
+  new TransformationRegistry(assets, defaultContent.structures, defaultContent.materials);
 
 const regionAt = (x: number, y: number) => SimulationRegion.around({ x: x * 24, y: y * 24, w: 1, h: 1 });
 const step = (system: BlockTransformationSystem, world: World, x: number, y: number, seconds: number) =>
@@ -35,17 +39,17 @@ test('registry valida composição lógica e rejeita operadores, blocos e IDs in
     duration: { seconds: 1, mode: 'continuous' }, probability: 1,
     retry: 'on-condition-reset', preserve: ['waterVolume'],
   } satisfies TransformationAsset;
-  const registry = new TransformationRegistry([fourth]);
+  const registry = createRegistry([fourth]);
   const action = registry.forBlock(B.STONE)[0].action;
   assert.equal(action.type === 'transformBlock' ? action.to : undefined, B.SAND);
-  assert.throws(() => new TransformationRegistry([{ ...fourth, id: 'bad', from: 'UNKNOWN' }]));
-  assert.throws(() => new TransformationRegistry([fourth, fourth]));
-  assert.throws(() => new TransformationRegistry([{ ...fourth, id: 'operator',
+  assert.throws(() => createRegistry([{ ...fourth, id: 'bad', from: 'UNKNOWN' }]));
+  assert.throws(() => createRegistry([fourth, fourth]));
+  assert.throws(() => createRegistry([{ ...fourth, id: 'operator',
     conditions: { property: 'water.saturation', operator: 'contains', value: 1 } } as unknown as TransformationAsset]));
 });
 
 test('evaluator interpreta all, any e not sem executar código dos assets', () => {
-  const rule = new TransformationRegistry([{
+  const rule = createRegistry([{
     id: 'logic', from: 'STONE', to: 'SAND',
     conditions: { all: [
       { property: 'water.saturation', operator: '>=', value: 1 },
@@ -73,7 +77,7 @@ test('pedra exige cinco dias contínuos e conserva volume absoluto ao virar grav
 });
 
 test('interromper a condição zera a duração e falha probabilística tenta uma única vez', () => {
-  const alwaysFail = new TransformationRegistry([{
+  const alwaysFail = createRegistry([{
     id: 'test.once', from: 'STONE', to: 'GRAVEL',
     conditions: { property: 'water.saturation', operator: '>=', value: 1 },
     duration: { days: 5, mode: 'continuous' }, probability: 0,
@@ -145,11 +149,11 @@ test('prioridade resolve conflito uma vez e uma quarta regra funciona apenas com
     { ...base, id: 'low', priority: 1, to: 'GRASS' },
     { ...base, id: 'fourth.asset.only', priority: 9, to: 'SAND' },
   ];
-  const system = new BlockTransformationSystem(new TransformationRegistry(assets));
+  const system = new BlockTransformationSystem(createRegistry(assets));
   const world = new World('FOURTH-RULE'), x = 3, y = 10;
   prepare(world, x, y, B.STONE);
   step(system, world, x, y, 1);
   assert.equal(world.get(x, y), B.SAND);
   assert.equal(system.save().length, 0);
-  assert.ok(transformationRegistry.has('wheat.ripen'));
+  assert.ok(defaultContent.transformations.has('wheat.ripen'));
 });

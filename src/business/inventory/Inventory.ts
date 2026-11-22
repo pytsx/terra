@@ -1,6 +1,6 @@
-import { legacyMaterials, type Materials } from '../content/Materials';
+import type { Materials } from '../content/Materials';
 import { ARMOR_SLOTS, BELT_SIZE, type Slot, type Stack, type SlotRef } from '../EngineTypes';
-import { recipes, type Recipe, type RecipeBook } from '../craft/RecipeBook';
+import type { Recipe, RecipeBook } from '../craft/RecipeBook';
 
 const empty = (length: number): Slot[] => Array.from({ length }, () => null);
 const clone = (slots: readonly Slot[]) => slots.map((s) => (s ? { ...s } : null));
@@ -56,7 +56,7 @@ function stackOperations(materials: Materials) {
   }
   return { durabilityOf, createStack, stackable, compatible, store, startingSlots };
 }
-export function startingSlots(stock: Record<string, number> = {}, gear: readonly string[] = [], materials: Materials = legacyMaterials) {
+export function startingSlots(stock: Record<string, number> = {}, gear: readonly string[] = [], materials: Materials) {
   return stackOperations(materials).startingSlots(stock, gear);
 }
 export class Inventory {
@@ -68,7 +68,7 @@ export class Inventory {
   private inspectedRecipe: Slot[] | null = null;
   private cursor: Slot = null;
   private cursorOrigin: SlotRef | null = null;
-  constructor(slots: readonly Slot[] | undefined = undefined, equipment: readonly Slot[] = empty(4), private readonly book: RecipeBook = recipes, private readonly materials: Materials = legacyMaterials) {
+  constructor(private readonly book: RecipeBook, private readonly materials: Materials, slots: readonly Slot[] | undefined = undefined, equipment: readonly Slot[] = empty(4)) {
     this.stacks = stackOperations(materials);
     this.slots = clone(slots ?? this.stacks.startingSlots());
     // Migrate malformed old stacks of tools/armor into individual slots.

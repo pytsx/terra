@@ -9,7 +9,10 @@ import { GAME_DAY_SECONDS } from '../src/business/time';
 import { blockPartitionAt } from '../src/business/simulation/BlockPartitionScheduler';
 import { SimulationRegion } from '../src/business/simulation/SimulationRegion';
 import { mixHash, hashText } from '../src/shared/math';
-import { featureGenerator } from '../src/business/worldgen/FeatureGenerator';
+import { FeatureGenerator } from '../src/business/worldgen/FeatureGenerator';
+import { defaultContent } from '../src/assets/runtime';
+
+const featureGenerator = new FeatureGenerator(defaultContent.structures);
 
 const y = 24;
 const regionAt = (cx: number) =>
@@ -314,7 +317,7 @@ test('every-interval permite tentativas consecutivas enquanto condições perman
     probability: 1,
     retry: 'every-interval',
     action: { type: 'spawnItem', item: 'sapling', amount: 1 },
-  }]);
+  }], defaultContent.structures, defaultContent.materials);
 
   const world = new World('EVERY-INT');
   const items: string[] = [];
@@ -324,7 +327,7 @@ test('every-interval permite tentativas consecutivas enquanto condições perman
   for (let row = 0; row < y; row++) world.set(wx, row, B.AIR, false);
   world.set(wx, y, B.WOOD, false);  // natural
 
-  const system = new WorldEvolutionSystem(registry);
+  const system = new WorldEvolutionSystem(registry, featureGenerator);
   const region = regionAt(wx);
   const partition = blockPartitionAt(wx, y);
 
@@ -345,7 +348,7 @@ test('on-condition-reset não produz novamente sem interrupção', () => {
     probability: 1,
     retry: 'on-condition-reset',
     action: { type: 'spawnItem', item: 'sapling', amount: 1 },
-  }]);
+  }], defaultContent.structures, defaultContent.materials);
 
   const world = new World('ON-COND-RESET');
   const items: string[] = [];
@@ -355,7 +358,7 @@ test('on-condition-reset não produz novamente sem interrupção', () => {
   for (let row = 0; row < y; row++) world.set(wx, row, B.AIR, false);
   world.set(wx, y, B.WOOD, false);
 
-  const system = new WorldEvolutionSystem(registry);
+  const system = new WorldEvolutionSystem(registry, featureGenerator);
   const region = regionAt(wx);
   const partition = blockPartitionAt(wx, y);
 

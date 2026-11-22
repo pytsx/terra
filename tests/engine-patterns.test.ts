@@ -5,16 +5,19 @@ import { EntityRegistry } from '../src/business/entities/EntityRegistry';
 import { World, type BlockEdit } from '../src/business/world/World';
 import { RNG } from '../src/shared/math';
 import { ImpactParticles } from '../src/render/ImpactParticles';
+import { defaultContent } from '../src/assets/runtime';
+
+const entities = defaultContent.entities;
 
 test('mundos e entidades compartilham definições imutáveis e mantêm a vida por instância', () => {
   assert.equal(BLOCKS[B.WATER], BLOCK_ASSETS.WATER.config);
   assert.ok(Object.isFrozen(BLOCKS[B.WATER].fluid));
   assert.equal(ITEMS.pickaxe, ITEM_ASSETS.pickaxe.config);
   assert.ok(Object.isFrozen(ITEMS.pickaxe.tool));
-  assert.ok(Object.isFrozen(EntityRegistry.asset('cow').config.breeding));
-  const a = EntityRegistry.create('slime', 0, 0, 1)!;
-  const b = EntityRegistry.create('slime', 0, 0, 1)!;
-  a.hit(1, EntityRegistry.asset('slime').config.health);
+  assert.ok(Object.isFrozen(entities.asset('cow').config.breeding));
+  const a = entities.create('slime', 0, 0, 1)!;
+  const b = entities.create('slime', 0, 0, 1)!;
+  a.hit(1, entities.asset('slime').config.health);
   assert.equal(a.dead, true);
   assert.equal(b.dead, false);
 });
@@ -36,10 +39,10 @@ test('observadores podem sair e restaurar uma edição distante mantém o chunk 
 
 test('dormência preserva o crescimento e o fim do período amoroso libera a alimentação', () => {
   const world = new World('CICLO');
-  const calf = EntityRegistry.create('cow', 0, 0, 0, true)!;
+  const calf = entities.create('cow', 0, 0, 0, true)!;
   const far = { x: 10000, y: 0, w: 18, h: 30, vx: 0, ground: false, face: 1 };
   const rng = new RNG(1);
-  const config = EntityRegistry.asset('cow').config.breeding;
+  const config = entities.asset('cow').config.breeding;
   calf.step(1, world, far, rng);
   assert.equal(calf.view().state, 'dormant');
   assert.equal(calf.view().baby, true);

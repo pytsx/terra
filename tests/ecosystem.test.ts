@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/business/world/World';
 import { B, TILE } from '../src/business/catalog';
-import { EntityRegistry, type EngineEntity } from '../src/business/entities/EntityRegistry';
+import type { EngineEntity } from '../src/business/entities/EntityRegistry';
 import { RNG } from '../src/shared/math';
+import { defaultContent } from '../src/assets/runtime';
+
+const entities = defaultContent.entities;
 
 function habitat() {
   const world = new World('habitat');
@@ -12,8 +15,8 @@ function habitat() {
     world.set(x + dx, floor + dy, dy < 0 ? B.AIR : dy === 0 ? B.GRASS : B.DIRT, false);
   }
   function spawn(id: string, offset = 0) {
-    return EntityRegistry.create(id, (x + offset) * TILE,
-      floor * TILE - EntityRegistry.asset(id).config.height, 1)!;
+    return entities.create(id, (x + offset) * TILE,
+      floor * TILE - entities.asset(id).config.height, 1)!;
   }
   function run(seconds: number, ...population: EngineEntity[]) {
     simulate(0, seconds, population);
@@ -65,8 +68,8 @@ test('raposa caça o coelho, cupim decompõe tocos e caranguejo escava areia', (
   world.set(x, floor, B.SAND, false);
   run(1, spawn('sandcrab', 0));
   assert.equal(world.get(x, floor), B.AIR);
-  assert.ok(EntityRegistry.spawnPool(B.SAND).some(entry => entry.id === 'sandcrab'));
-  assert.ok(!EntityRegistry.spawnPool(B.GRASS).some(entry => entry.id === 'sandcrab'));
+  assert.ok(entities.spawnPool(B.SAND).some(entry => entry.id === 'sandcrab'));
+  assert.ok(!entities.spawnPool(B.GRASS).some(entry => entry.id === 'sandcrab'));
 });
 
 test('o coelho foge ao avistar a raposa e o cupim sobe por um tronco natural', () => {
