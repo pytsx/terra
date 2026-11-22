@@ -1,4 +1,4 @@
-import { TILE } from '../catalog';
+import { TILE } from '../EngineTypes';
 import { Animal } from './Animal';
 import { Health } from '../entities/Health';
 import type { ActorView } from '../entities/Actor';

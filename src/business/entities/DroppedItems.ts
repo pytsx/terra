@@ -1,4 +1,4 @@
-import { TILE, type Stack } from '../catalog';
+import { TILE, type Stack } from '../EngineTypes';
 import type { DroppedSave } from '../save';
 import type { World } from '../world/World';
 

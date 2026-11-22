@@ -1,9 +1,10 @@
-import { installedMaterials } from '../content/Materials';
-import { TILE, WORLD_W, WORLD_H, LEGACY_WORLD_H, CURRENT_GENERATION, CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
+import type { Materials } from '../content/Materials';
+import { TILE, WORLD_W, WORLD_H, LEGACY_WORLD_H, CHUNK_WIDTH, CHUNK_HEIGHT } from '../EngineTypes';
 import { RNG, clamp, noise1, noise2, hashText } from '../../shared/math';
 import type { TileEdit, BlockDamage, ExploredSection } from '../save';
 import type { RuntimeContent } from '../content/RuntimeContent';
-import { createGenerationContext, modernPipeline } from '../worldgen';
+import { defaultContent } from '../../assets/runtime';
+import { createGenerationContext } from '../worldgen';
 import { TerrainColumn } from '../worldgen/TerrainColumn';
 import { ChunkStore } from './ChunkStore';
 import { ExplorationMap } from './ExplorationMap';
@@ -53,7 +54,7 @@ export class World {
     placeFeature: defineCommand('placeFeature', this.applyNaturalFeature.bind(this)),
   };
   readonly hydrology: Hydrology;
-  readonly materials: typeof installedMaterials;
+  readonly materials: Materials;
   readonly evolution: WorldEvolutionSystem;
   /** Compatibility alias for saves and integrations from the transformation-only version. */
   get transformations() { return this.evolution; }
@@ -191,10 +192,10 @@ export class World {
   private fallTime = 0;
   private readonly partitionFallTime = new Float64Array(BLOCK_PARTITION_COUNT);
   readonly spawnX: number;
-  constructor(readonly seed: string, readonly generationVersion = CURRENT_GENERATION, content?: Pick<RuntimeContent, 'materials' | 'generation' | 'transformations' | 'structures'>) {
-    this.materials = content?.materials ?? installedMaterials;
+  constructor(readonly seed: string, readonly generationVersion = 6, content: Pick<RuntimeContent, 'materials' | 'generation' | 'transformations' | 'structures'> = defaultContent) {
+    this.materials = content.materials;
     this.hydrology = new Hydrology(this.materials);
-    this.evolution = new WorldEvolutionSystem(content?.transformations, new FeatureGenerator(content?.structures));
+    this.evolution = new WorldEvolutionSystem(content.transformations, new FeatureGenerator(content.structures));
     this.h = hashText(seed);
     this.blockUpdates = new BlockPartitionScheduler(this.h);
     this.height = generationVersion === 1 ? LEGACY_WORLD_H : WORLD_H;
@@ -204,7 +205,7 @@ export class World {
     this.surface = new Int16Array(this.infinite ? 0 : WORLD_W);
     this.chunks = new ChunkStore(
       Math.ceil(this.height / CHUNK_HEIGHT),
-      cx => new TerrainColumn(this.h, cx, this.height, this.spawnX, this.generationVersion, content?.generation.terrain, this.materials.keys, content?.generation.biomes),
+      cx => new TerrainColumn(this.h, cx, this.height, this.spawnX, this.generationVersion, content.generation.terrain, this.materials.keys, content.generation.biomes),
       (cx, cy, cells) => this.restoreSection(cx, cy, cells),
       cx => {
         this.evolution.releaseColumn(cx);
@@ -225,7 +226,7 @@ export class World {
     this.hydrology.onChanged((x, y) => this.blockUpdates.invalidate(x, y));
     if (this.infinite) this.onBlockEdited(({ x, y, block }) => this.survey.update(x, y, block));
     if (generationVersion === 1) this.generateLegacy();
-    else if (generationVersion === 2) (content?.generation.modern ?? modernPipeline).run(createGenerationContext({
+    else if (generationVersion === 2) content.generation.modern.run(createGenerationContext({
       keys: this.materials.keys, generationVersion, seed: this.h, width: this.width, height: this.height, spawnX: this.spawnX,
       originX: 0, surface: this.surface, globalX: (x) => x, get: (x, y) => this.get(x, y),
       set: (x, y, block) => this.set(x, y, block, false),

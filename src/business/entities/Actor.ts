@@ -1,4 +1,4 @@
-import { TILE } from '../catalog';
+import { TILE } from '../EngineTypes';
 import type { World } from '../world/World';
 export interface ActorView {
   readonly x: number;

@@ -11,9 +11,9 @@ export const CHUNK_HEIGHT = 32;
 export const BELT_SIZE = 9;
 export interface Texture {
   base?: string;
-  grain?: { count: number; colors: string[]; max: number };
-  veins?: string[];
-  detail?: { x: number; y: number; w: number; h: number; color: string }[];
+  grain?: { count: number; colors: readonly string[]; max: number };
+  veins?: readonly string[];
+  detail?: readonly { x: number; y: number; w: number; h: number; color: string }[];
 }
 export interface Light {
   radius: number;
@@ -52,7 +52,7 @@ export interface Block {
   light?: Light;
   biome?: string;
   foliage?: string;
-  spawnDecoration?: { offsets: number[] };
+  spawnDecoration?: { offsets: readonly number[] };
 }
 export type ToolIcon = string;
 export const ARMOR_SLOTS = ['head', 'chest', 'legs', 'feet'] as const;

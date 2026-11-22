@@ -1,4 +1,4 @@
-import { TILE } from '../catalog';
+import { TILE } from '../EngineTypes';
 
 // Covers a 960 × 540 viewport at minimum zoom plus an off-screen safety margin.
 export const ACTIVE_HALF_WIDTH = 38;

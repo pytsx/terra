@@ -1,7 +1,7 @@
 import { clamp, noise1, rand01, smooth } from '../../shared/math';
 import { ClimateGenerator } from './ClimateGenerator';
 import { biomeVariants, baseBiomes } from '../../assets/generation';
-import { CURRENT_GENERATION } from '../catalog';
+import { CURRENT_GENERATION } from '../EngineTypes';
 import type { ClimateSample } from './types';
 
 export type Biome = string;

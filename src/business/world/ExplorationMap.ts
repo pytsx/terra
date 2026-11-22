@@ -1,4 +1,4 @@
-import { CHUNK_WIDTH as W, CHUNK_HEIGHT as H } from '../catalog';
+import { CHUNK_WIDTH as W, CHUNK_HEIGHT as H } from '../EngineTypes';
 import type { ExploredSection } from '../save';
 
 const UNKNOWN = 65535;

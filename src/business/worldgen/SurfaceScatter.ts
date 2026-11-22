@@ -1,9 +1,8 @@
-import { B } from '../catalog';
 import { hashText, rand01 } from '../../shared/math';
 import type { GenerationContext } from './types';
 import type { SurfaceScatter } from '../content/ContentPack';
 
-export function compileSurfaceScatter(assets: readonly SurfaceScatter[], keys = B) {
+export function compileSurfaceScatter(assets: readonly SurfaceScatter[], keys: Readonly<Record<string, number>>) {
   const ids = new Set<string>();
   const rules = assets.map(rule => {
     if (!rule.id || ids.has(rule.id) || !Object.hasOwn(keys, rule.block) || !Object.hasOwn(keys, rule.substrate) ||

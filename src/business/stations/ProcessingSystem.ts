@@ -1,12 +1,13 @@
-import { installedMaterials } from '../content/Materials';
-import { type Stack } from '../catalog';
-import { fuels, processingRecipes, stationRegistry } from './StationRegistry';
-import type { ProcessingRecipe, StationInstance } from './StationTypes';
+import type { Materials } from '../content/Materials';
+import { legacyMaterials } from '../content/Materials';
+import { type Stack } from '../EngineTypes';
+import { fuels, processingRecipes, stationRegistry, type ProcessingRecipeRegistry, type StationRegistry } from './StationRegistry';
+import type { FuelDefinition, ProcessingRecipe, StationInstance } from './StationTypes';
 import { canStore, countItem, store, storeAt, take, takeAt } from './SlotStorage';
 
 export class ProcessingSystem {
-  constructor(private readonly stations = stationRegistry, private readonly recipes = processingRecipes,
-    private readonly fuelTypes: Pick<typeof fuels, 'get'> = fuels, private readonly materials = installedMaterials) {}
+  constructor(private readonly stations: StationRegistry = stationRegistry, private readonly recipes: ProcessingRecipeRegistry = processingRecipes,
+    private readonly fuelTypes: Pick<ReadonlyMap<string, FuelDefinition>, 'get'> = fuels, private readonly materials: Materials = legacyMaterials) {}
   completed = 0;
   status(station: StationInstance) {
     const definition = this.stations.get(station.definitionId)!;
@@ -49,7 +50,7 @@ export class ProcessingSystem {
     if (result) station.revision++;
     return result;
   }
-  private insertAllowed(definition: NonNullable<ReturnType<typeof stationRegistry.get>>, area: 'input' | 'fuel', stack: Stack) {
+  private insertAllowed(definition: NonNullable<ReturnType<StationRegistry['get']>>, area: 'input' | 'fuel', stack: Stack) {
     if (!Object.hasOwn(this.materials.items, stack.item) || this.materials.items[stack.item].tool || this.materials.items[stack.item].armor || this.materials.items[stack.item].unique) return false;
     if (area === 'fuel') return definition.energy.type === 'thermal' && definition.energy.acceptedFuels.includes(stack.item);
     return this.recipes.compatible(definition).some(recipe => recipe.inputs.some(input => input.item === stack.item));

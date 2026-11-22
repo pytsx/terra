@@ -1,6 +1,6 @@
-import { CHUNK_WIDTH, type Slot, type Stack } from '../catalog';
+import { CHUNK_WIDTH, type Slot, type Stack } from '../EngineTypes';
 import type { SimulationRegion } from '../simulation/SimulationRegion';
-import { stationRegistry } from './StationRegistry';
+import { stationRegistry, type StationRegistry } from './StationRegistry';
 import type { StationInstance, StationSave, StationStoreSave } from './StationTypes';
 
 const key = (x: number, y: number) => `${x},${y}`;
@@ -12,7 +12,7 @@ export class StationStore {
   private readonly byPosition = new Map<string, StationInstance>();
   private readonly regions = new Map<number, Set<string>>();
   private nextId = 1;
-  constructor(saved?: StationStoreSave, private readonly definitions = stationRegistry) { if (saved) this.restore(saved); }
+  constructor(saved?: StationStoreSave, private readonly definitions: StationRegistry = stationRegistry) { if (saved) this.restore(saved); }
   get size() { return this.byId.size; }
   getById(id: string) { return this.byId.get(id); }
   getAt(x: number, y: number) { return this.byPosition.get(key(x, y)); }

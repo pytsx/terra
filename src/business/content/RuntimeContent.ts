@@ -8,8 +8,11 @@ import type { FuelDefinition } from '../stations/StationTypes';
 import type { GenerationPipeline } from '../worldgen/types';
 
 export interface RuntimeContent {
+  /** Stable identity persisted with saves to reject incompatible catalogs safely. */
+  readonly signature: string;
+  readonly acceptsLegacySaves: boolean;
   readonly materials: Materials;
-  readonly entities: typeof EntityRegistry;
+  readonly entities: EntityRegistry;
   readonly recipes: RecipeBook;
   readonly transformations: TransformationRegistry;
   readonly stations: StationRegistry;

@@ -1,5 +1,5 @@
-import { installedMaterials } from '../content/Materials';
-import { CHUNK_WIDTH } from '../catalog';
+import type { Materials } from '../content/Materials';
+import { CHUNK_WIDTH } from '../EngineTypes';
 import { mixHash } from '../../shared/math';
 import { RegionalWeather } from './RegionalWeather';
 import type { World } from './World';
@@ -20,7 +20,7 @@ const MAX_AQUIFER_LINK_DEPTH = 160;
 export interface WaterState { volume: number; capacity: number; saturation: number }
 
 export class Hydrology {
-  constructor(private readonly materials = installedMaterials) {}
+  constructor(private readonly materials: Materials) {}
   private readonly liquid = (id: number) => id === this.materials.keys.AIR || id === this.materials.keys.WATER || id === this.materials.keys.LAVA || id === this.materials.keys.TORCH || !!this.materials.blocks[id]?.openChannel;
 private readonly capacity = (id: number) => this.liquid(id) ? full : Math.round((this.materials.blocks[id].waterCapacity ?? 0) * full);
 

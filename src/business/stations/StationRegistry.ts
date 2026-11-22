@@ -1,12 +1,13 @@
-import { installedMaterials } from '../content/Materials';
+import type { Materials } from '../content/Materials';
 import { production } from '../../assets/production';
+import { legacyMaterials } from '../content/Materials';
 
 import type { FuelDefinition, ProcessingRecipe, StationDefinition } from './StationTypes';
 
 export class StationRegistry {
   private readonly definitions = new Map<string, StationDefinition>();
   private readonly blocks = new Map<number, StationDefinition>();
-  constructor(values: readonly StationDefinition[], materials = installedMaterials) {
+  constructor(values: readonly StationDefinition[], materials: Materials) {
     for (const value of values) {
       if (!value.id || this.definitions.has(value.id)) throw new Error(`Estação duplicada: ${value.id}`);
       const block = materials.keys[value.block];
@@ -37,11 +38,10 @@ export class StationRegistry {
   forBlock(block: number) { return this.blocks.get(block); }
   values() { return [...this.definitions.values()]; }
 }
-
 export class ProcessingRecipeRegistry {
   private readonly byStation = new WeakMap<StationDefinition, readonly ProcessingRecipe[]>();
   private readonly recipes = new Map<string, ProcessingRecipe>();
-  constructor(values: readonly ProcessingRecipe[], materials = installedMaterials) {
+  constructor(values: readonly ProcessingRecipe[], materials: Materials) {
     for (const value of values) {
       if (!value.id || this.recipes.has(value.id) || !Number.isFinite(value.work) || value.work <= 0 ||
         !value.requires.length || [...value.inputs, ...value.outputs].some(s => !materials.items[s.item] || !Number.isSafeInteger(s.amount) || s.amount <= 0))
@@ -74,7 +74,7 @@ export interface ProductionDefinitions {
   fuels: readonly FuelDefinition[];
 }
 
-export function compileProduction(definitions: ProductionDefinitions, materials = installedMaterials) {
+export function compileProduction(definitions: ProductionDefinitions, materials: Materials) {
   const stationRegistry = new StationRegistry(definitions.stations, materials);
   const processingRecipes = new ProcessingRecipeRegistry(definitions.processes, materials);
   const reachable = new Set(stationRegistry.values().filter(s => s.mode === 'processing')
@@ -92,5 +92,6 @@ export function compileProduction(definitions: ProductionDefinitions, materials 
     for (const item of definition.energy.acceptedFuels) if (!fuels.has(item)) throw new Error('Combustível sem definição: ' + item);
   return { stationRegistry, processingRecipes, fuels };
 }
+/** @deprecated Compatibility facades; simulations receive these through RuntimeContent. */
+export const { stationRegistry, processingRecipes, fuels } = compileProduction(production, legacyMaterials);
 
-export const { stationRegistry, processingRecipes, fuels } = compileProduction(production);

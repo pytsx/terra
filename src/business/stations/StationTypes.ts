@@ -1,4 +1,4 @@
-import type { Slot, Stack } from '../catalog';
+import type { Slot, Stack } from '../EngineTypes';
 
 export type EnergyDefinition =
   | { type: 'none' }

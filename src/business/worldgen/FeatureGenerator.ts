@@ -1,16 +1,15 @@
 import { mixHash } from '../../shared/math';
 import { TreeStructurePlanner, type FeaturePlacement } from './features/TreeStructurePlanner';
-import { worldFeatureRegistry, type WorldFeatureRegistry } from './features/WorldFeatureRegistry';
+import type { WorldFeatureRegistry } from './features/WorldFeatureRegistry';
 
 export interface FeaturePlan {
   readonly id: string;
   readonly placements: readonly FeaturePlacement[];
   readonly replace: ReadonlySet<number>;
 }
-
 export class FeatureGenerator {
   private readonly trees = new TreeStructurePlanner();
-  constructor(private readonly registry: WorldFeatureRegistry = worldFeatureRegistry) {}
+  constructor(private readonly registry: WorldFeatureRegistry) {}
 
   plan(id: string, x: number, y: number, seed: number, variant: number): FeaturePlan | undefined {
     const feature = this.registry.get(id);
@@ -21,4 +20,3 @@ export class FeatureGenerator {
   }
 }
 
-export const featureGenerator = new FeatureGenerator();

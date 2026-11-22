@@ -1,6 +1,7 @@
-import { installedMaterials } from '../content/Materials';
+import type { Materials } from '../content/Materials';
 import { production } from '../../assets/production';
-import { type Stack, type Slot } from '../catalog';
+import { legacyMaterials } from '../content/Materials';
+import { type Stack, type Slot } from '../EngineTypes';
 export interface Recipe {
   station?: string;
   pattern: readonly (readonly (string | null)[])[];
@@ -28,7 +29,7 @@ function signature(rows: readonly (readonly (string | null)[])[]) {
 }
 export class RecipeBook {
   private readonly patterns = new Map<string, Recipe>();
-  constructor(readonly recipes: readonly Recipe[], materials = installedMaterials) {
+  constructor(readonly recipes: readonly Recipe[], materials: Materials = legacyMaterials) {
     for (const recipe of recipes) {
       const { pattern, output } = recipe,
         width = pattern[0]?.length ?? 0;
@@ -61,4 +62,5 @@ export class RecipeBook {
       (!station ? undefined : this.patterns.get('personal:' + shape));
   }
 }
-export const recipes = new RecipeBook(production.recipes);
+/** @deprecated Compatibility facade; simulations use RuntimeContent.recipes. */
+export const recipes = new RecipeBook(production.recipes, legacyMaterials);

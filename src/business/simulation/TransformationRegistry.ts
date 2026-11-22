@@ -1,9 +1,9 @@
-import { installedMaterials } from '../content/Materials';
-import { transformationAssets, type TransformationAsset } from '../../assets';
+import type { Materials } from '../content/Materials';
+import type { TransformationAsset } from '../../assets/transformations/types';
+import type { WorldFeatureRegistry } from '../worldgen/features/WorldFeatureRegistry';
 import { compileCondition } from './TransformationEvaluator';
 
 import { GAME_DAY_SECONDS } from '../time';
-import { worldFeatureRegistry } from '../worldgen/features/WorldFeatureRegistry';
 
 export type EvolutionAction =
   | { readonly type: 'transformBlock'; readonly to: number; readonly preserve: readonly 'waterVolume'[] }
@@ -22,12 +22,11 @@ export interface TransformationRule {
   readonly eligibility: { readonly natural: boolean; readonly playerPlaced: boolean };
   readonly action: EvolutionAction;
 }
-
 export class TransformationRegistry {
   readonly rules: readonly TransformationRule[];
   private readonly bySource = new Map<number, readonly TransformationRule[]>();
 
-  constructor(assets: readonly TransformationAsset[] = transformationAssets, structures = worldFeatureRegistry, materials = installedMaterials) {
+  constructor(assets: readonly TransformationAsset[], structures: WorldFeatureRegistry, materials: Materials) {
     const ids = new Set<string>();
     const resolved = assets.map((asset): TransformationRule => {
       if (!asset.id || ids.has(asset.id)) throw new Error(`Transformação duplicada: ${asset.id}`);
@@ -77,4 +76,3 @@ export class TransformationRegistry {
   has(id: string) { return this.rules.some(rule => rule.id === id); }
 }
 
-export const transformationRegistry = new TransformationRegistry();

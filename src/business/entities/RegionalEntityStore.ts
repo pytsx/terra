@@ -1,4 +1,4 @@
-import { CHUNK_HEIGHT, CHUNK_WIDTH, TILE } from '../catalog';
+import { CHUNK_HEIGHT, CHUNK_WIDTH, TILE } from '../EngineTypes';
 import type { EntityRegionSave, EntitySave } from '../save';
 import type { SimulationRegion } from '../simulation/SimulationRegion';
 import { EntityRegistry, type EngineEntity } from './EntityRegistry';
@@ -16,7 +16,7 @@ export class RegionalEntityStore {
    * intentionally never walked during an ordinary simulation tick. */
   private readonly activeKeys = new Set<string>();
 
-  constructor(regions?: readonly EntityRegionSave[], legacy: readonly EntitySave[] = [], private readonly entities = EntityRegistry) {
+  constructor(regions: readonly EntityRegionSave[] | undefined, legacy: readonly EntitySave[] = [], private readonly entities: EntityRegistry) {
     if (regions !== undefined) {
       for (const [rx, ry, entities] of regions) this.bucket(rx, ry).sleeping.push(...entities);
     } else {

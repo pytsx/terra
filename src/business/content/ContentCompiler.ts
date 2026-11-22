@@ -1,4 +1,4 @@
-import type { Block, Item } from '../catalog';
+import type { Block, Item } from '../EngineTypes';
 import type { BlockAssetScript, ItemAssetScript } from '../../assets/types';
 import type { ContentPack } from './ContentPack';
 

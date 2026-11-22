@@ -1,11 +1,10 @@
-import { B } from '../../catalog';
 import type {
   BlockKey, OreDepositFeature, ResolvedOreDepositFeature, ResolvedTerrainMaterialFeature,
   ResolvedTreeFeature, TerrainMaterialFeature, TreeFeature,
 } from './types';
 
-function blockId(key: BlockKey, feature: string) {
-  const id = B[key];
+function blockId(keys: Readonly<Record<string, number>>, key: BlockKey, feature: string) {
+  const id = keys[key];
   if (id === undefined) throw new Error(`Feature ${feature}: bloco desconhecido ${key}`);
   return id;
 }
@@ -17,6 +16,7 @@ function finite(value: number, label: string, feature: string) {
 /** Resolves asset keys and validates feature contracts at composition time. */
 export class FeatureRegistry {
   private readonly ids = new Set<string>();
+  constructor(private readonly keys: Readonly<Record<string, number>>) {}
 
   private claim(id: string, version?: number) {
     if (version !== undefined && (!Number.isInteger(version) || version < 1)) throw new Error('Versão de geração inválida: ' + id);
@@ -36,8 +36,8 @@ export class FeatureRegistry {
         throw new Error(`Feature ${feature.id}: depósito inválido`);
       return Object.freeze({
         ...feature,
-        block: blockId(feature.block, feature.id),
-        replace: new Set(feature.replace.map((key) => blockId(key, feature.id))),
+        block: blockId(this.keys, feature.block, feature.id),
+        replace: new Set(feature.replace.map((key) => blockId(this.keys, key, feature.id))),
       });
     }));
   }
@@ -54,9 +54,9 @@ export class FeatureRegistry {
           throw new Error(`Feature ${feature.id}: chance de bioma inválida`);
       return Object.freeze({
         ...feature,
-        trunk: blockId(feature.trunk, feature.id),
-        leaves: blockId(feature.leaves, feature.id),
-        replaceLeaves: new Set(feature.replaceLeaves.map((key) => blockId(key, feature.id))),
+        trunk: blockId(this.keys, feature.trunk, feature.id),
+        leaves: blockId(this.keys, feature.leaves, feature.id),
+        replaceLeaves: new Set(feature.replaceLeaves.map((key) => blockId(this.keys, key, feature.id))),
         coniferBiomes: new Set(feature.coniferBiomes),
       });
     }));
@@ -69,10 +69,10 @@ export class FeatureRegistry {
       throw new Error(`Feature ${feature.id}: materiais de terreno inválidos`);
     return Object.freeze({
       ...feature,
-      air: blockId(feature.air, feature.id), bedrock: blockId(feature.bedrock, feature.id),
-      surface: blockId(feature.surface, feature.id), soil: blockId(feature.soil, feature.id),
-      desertSurface: blockId(feature.desertSurface, feature.id), desertSoil: blockId(feature.desertSoil, feature.id),
-      rock: blockId(feature.rock, feature.id), deepRock: blockId(feature.deepRock, feature.id),
+      air: blockId(this.keys, feature.air, feature.id), bedrock: blockId(this.keys, feature.bedrock, feature.id),
+      surface: blockId(this.keys, feature.surface, feature.id), soil: blockId(this.keys, feature.soil, feature.id),
+      desertSurface: blockId(this.keys, feature.desertSurface, feature.id), desertSoil: blockId(this.keys, feature.desertSoil, feature.id),
+      rock: blockId(this.keys, feature.rock, feature.id), deepRock: blockId(this.keys, feature.deepRock, feature.id),
     });
   }
 }

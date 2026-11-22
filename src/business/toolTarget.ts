@@ -1,4 +1,4 @@
-import { TILE } from './catalog';
+import { TILE } from './EngineTypes';
 import type { ActorView } from './entities/Actor';
 import type { EngineEntity } from './entities/EntityRegistry';
 import type { TerrainView } from './world/World';

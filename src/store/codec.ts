@@ -107,6 +107,10 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
   const legacy = data.v === 2 && data.version === undefined;
   if (!legacy && data.version !== 3 && data.version !== 4)
     throw new Error('Versão de save desconhecida.');
+  if (typeof data.contentSignature === 'string' && data.contentSignature !== content.signature)
+    throw new Error('Save content catalog is incompatible.');
+  if (data.contentSignature === undefined && !content.acceptsLegacySaves)
+    throw new Error('This catalog does not accept unidentified legacy saves.');
   if (typeof data.seed !== 'string' || !data.seed.trim() || !Array.isArray(data.edits))
     throw new Error('Mundo inválido.');
   const generationVersion = Math.floor(numeric(data.generationVersion, 1, 1, CURRENT_GENERATION));
@@ -270,6 +274,7 @@ export function decodeSave(raw: string, legacyZoom: number, content: RuntimeCont
     : undefined;
   return {
     version: 4,
+    contentSignature: typeof data.contentSignature === 'string' ? data.contentSignature : content.signature,
     weather: validWeather ? { ticks, carry: numeric(weather.carry, 0, -1, 1), doses: weather.doses as number[],
       visits: (weather.visits as unknown[]).filter((v): v is [number, number] => Array.isArray(v) && v.length === 2 &&
         Number.isSafeInteger(v[0]) && Number.isSafeInteger(v[1]) && v[1] >= 0 && v[1] <= ticks) } : undefined,

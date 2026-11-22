@@ -1,5 +1,4 @@
-import { worldFeatureAssets, type WorldFeatureAsset } from '../../../assets';
-import { B } from '../../catalog';
+import type { WorldFeatureAsset } from '../../../assets/features/types';
 
 export interface ResolvedWorldFeature extends Omit<WorldFeatureAsset, 'trunk' | 'leaves' | 'replace'> {
   readonly trunk: number;
@@ -9,19 +8,18 @@ export interface ResolvedWorldFeature extends Omit<WorldFeatureAsset, 'trunk' | 
 
 export class WorldFeatureRegistry {
   private readonly features = new Map<string, ResolvedWorldFeature>();
-  constructor(assets: readonly WorldFeatureAsset[] = worldFeatureAssets) {
+  constructor(assets: readonly WorldFeatureAsset[], keys: Readonly<Record<string, number>>) {
     for (const asset of assets) {
-      const trunk = B[asset.trunk], leaves = B[asset.leaves];
+      const trunk = keys[asset.trunk], leaves = keys[asset.leaves];
       if (!asset.id || this.features.has(asset.id) || asset.strategy !== 'tree' || trunk === undefined || leaves === undefined ||
         !Number.isInteger(asset.minHeight) || asset.minHeight < 1 || !Number.isInteger(asset.heightVariation) ||
-        asset.heightVariation < 1 || !asset.replace.length || asset.replace.some(block => B[block] === undefined))
+        asset.heightVariation < 1 || !asset.replace.length || asset.replace.some(block => keys[block] === undefined))
         throw new Error(`Feature estrutural inválida: ${asset.id}`);
       this.features.set(asset.id, Object.freeze({ ...asset, trunk, leaves,
-        replace: new Set(asset.replace.map(block => B[block])) }));
+        replace: new Set(asset.replace.map(block => keys[block])) }));
     }
   }
   get(id: string) { return this.features.get(id); }
   has(id: string) { return this.features.has(id); }
 }
 
-export const worldFeatureRegistry = new WorldFeatureRegistry();

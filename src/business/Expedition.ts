@@ -4,9 +4,10 @@ import { DroppedItems } from './entities/DroppedItems';
 import { tracePlacement, traceTool } from './toolTarget';
 import {
   BELT_SIZE,
+  CURRENT_GENERATION,
   TILE,
   type SlotRef,
-} from './catalog';
+} from './EngineTypes';
 import { World, type TerrainView } from './world/World';
 import { Explorer, type Movement } from './entities/Explorer';
 import type { EngineEntity } from './entities/EntityRegistry';
@@ -121,7 +122,7 @@ export class Expedition {
     this.processing = new ProcessingSystem(this.content.stations, this.content.processes, this.content.fuels, this.content.materials);
     this.terrain = new World(
       seed.trim().slice(0, 40) || 'AURORA-1264',
-      save?.generationVersion, this.content,
+      save?.generationVersion ?? CURRENT_GENERATION, this.content,
     );
     if (save) {
       this.terrain.importExploration(save.exploration ?? []);
@@ -620,7 +621,7 @@ export class Expedition {
   }
   private performQuickPlace() {
     const quick = Object.entries(this.content.materials.itemAssets).find(([, asset]) =>
-      'place' in asset.config ? asset.config.place.quickPlace : false,
+      asset.config.place?.quickPlace ?? false,
     );
     if (!quick) return;
     const [itemId, itemAsset] = quick;
@@ -628,7 +629,7 @@ export class Expedition {
       this.events.push({ type: 'message', text: `Fabrique mais ${itemAsset.config.name}.` });
       return;
     }
-    const blockKey = 'place' in itemAsset.config ? itemAsset.config.place.block : undefined;
+    const blockKey = itemAsset.config.place?.block;
     if (!blockKey) return;
     const tile = this.content.materials.keys[blockKey];
     if (tile === undefined) return;
@@ -884,6 +885,7 @@ export class Expedition {
   save(): ExpeditionSave {
     return {
       version: 4,
+      contentSignature: this.content.signature,
       generationVersion: this.terrain.generationVersion,
       seed: this.world.seed,
       edits: this.terrain.exportEdits(),

@@ -1,4 +1,4 @@
-import type { Slot, Stack } from './catalog';
+import type { Slot, Stack } from './EngineTypes';
 export type TileEdit = [index: number, block: number] | [x: number, y: number, block: number];
 export type BlockDamage = [index: number, fraction: number] | [x: number, y: number, fraction: number];
 export type ExploredSection = [chunkX: number, chunkY: number, rle: number[]];
@@ -32,6 +32,7 @@ export interface EntitySave {
 export type EntityRegionSave = [regionX: number, regionY: number, entities: EntitySave[]];
 export interface ExpeditionSave {
   version: 4;
+  contentSignature?: string;
   generationVersion?: number;
   seed: string;
   edits: TileEdit[];

@@ -1,5 +1,5 @@
 import { Actor } from './Actor';
-import { TILE } from '../catalog';
+import { TILE } from '../EngineTypes';
 import type { World } from '../world/World';
 import type { PlayerSave } from '../save';
 import { clamp } from '../../shared/math';

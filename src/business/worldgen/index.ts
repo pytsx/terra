@@ -15,7 +15,7 @@ import { FeatureRegistry } from './features/FeatureRegistry';
 import { GenerationPipeline, type ClimateSample, type GenerationContext } from './types';
 
 export const climateGenerator = new ClimateGenerator();
-export const generationFeatures = new FeatureRegistry();
+export const generationFeatures = new FeatureRegistry(B);
 export const resolvedOreDeposits = generationFeatures.ore(oreDepositFeatures);
 export const resolvedTrees = generationFeatures.trees(treeFeatures);
 export const resolvedTerrainMaterials = generationFeatures.terrain(terrainMaterialFeature);
@@ -26,7 +26,7 @@ export const terrainPipeline = new GenerationPipeline([
   new AquiferGenerator(),
   new OreGenerator(resolvedOreDeposits),
   new FloatingIslandGenerator(),
-  new SurfaceFeatureGenerator(resolvedTrees, undefined, undefined, compileSurfaceScatter(scatterAssets)),
+  new SurfaceFeatureGenerator(resolvedTrees, undefined, undefined, compileSurfaceScatter(scatterAssets, B)),
   new SpawnGenerator(),
 ]);
 export const modernPipeline = new GenerationPipeline([climateGenerator, ...terrainPipeline.stages]);

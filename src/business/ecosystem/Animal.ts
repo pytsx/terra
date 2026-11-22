@@ -1,4 +1,4 @@
-import { TILE } from '../catalog';
+import { TILE } from '../EngineTypes';
 import { Mob } from '../entities/Mob';
 import type { EngineEntity } from '../entities/EntityRegistry';
 import type { World } from '../world/World';

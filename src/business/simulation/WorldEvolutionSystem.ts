@@ -1,11 +1,11 @@
 import { hashText, mixHash } from '../../shared/math';
 import type { World } from '../world/World';
-import { featureGenerator } from '../worldgen/FeatureGenerator';
-import { CHUNK_WIDTH, CHUNK_HEIGHT } from '../catalog';
+import type { FeatureGenerator } from '../worldgen/FeatureGenerator';
+import { CHUNK_WIDTH, CHUNK_HEIGHT } from '../EngineTypes';
 import { blockPartitionAt } from './BlockPartitionScheduler';
 import type { SimulationRegion } from './SimulationRegion';
 import { TransformationEvaluator } from './TransformationEvaluator';
-import { transformationRegistry, type TransformationRegistry } from './TransformationRegistry';
+import type { TransformationRegistry } from './TransformationRegistry';
 import { TransformationState, type TransformationStateRecord } from './TransformationState';
 
 export const MAX_EVOLUTION_CELLS_PER_PARTITION = 1024;
@@ -18,7 +18,7 @@ export class WorldEvolutionSystem {
   private readonly candidatesByChunk = new Map<string, Set<string>>();
   private readonly scannedCells = new Map<string, Uint8Array>();
 
-  constructor(private readonly registry: TransformationRegistry = transformationRegistry, private readonly features = featureGenerator) {}
+  constructor(private readonly registry: TransformationRegistry, private readonly features: FeatureGenerator) {}
 
   step(dt: number, world: World, region: SimulationRegion, partition: number) {
     if (!(dt > 0)) return;

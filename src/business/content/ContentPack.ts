@@ -1,4 +1,4 @@
-import type { Block, Item } from '../catalog';
+import type { Block, Item } from '../EngineTypes';
 import type { Recipe } from '../craft/RecipeBook';
 import type { FuelDefinition, ProcessingRecipe, StationDefinition } from '../stations/StationTypes';
 import type { TransformationAsset } from '../../assets/transformations/types';

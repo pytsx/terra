@@ -1,7 +1,7 @@
 import { Actor, type ActorView } from './Actor';
 import type { EntitySensor } from '../../assets/entity-types';
 import type { RNG } from '../../shared/math';
-import { TILE } from '../catalog';
+import { TILE } from '../EngineTypes';
 import type { World } from '../world/World';
 
 const gravity = 950;

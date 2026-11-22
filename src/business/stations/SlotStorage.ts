@@ -1,4 +1,4 @@
-import type { Slot, Stack } from '../catalog';
+import type { Slot, Stack } from '../EngineTypes';
 
 export function countItem(slots: readonly Slot[], item: string) {
   return slots.reduce((total, slot) => total + (slot?.item === item ? slot.amount : 0), 0);
